@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#2b160f" />
+  <meta name="description" content="TiraMio Tiramisu — layers of love, in every bite. Choose your perfect tiramisu box and order on WhatsApp." />
+  <title>TiraMio Tiramisu — Layers of Love, in Every Bite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="scroll-progress" aria-hidden="true"></div>
+  <div class="announcement"><span class="sparkle">✦</span> A little box of happiness, made with care <span class="sparkle">✦</span></div>
+  <header class="site-header" id="top">
+    <a class="brand" href="#top" aria-label="TiraMio home">
+      <span class="brand-mark"><span class="cake-stack"><i></i><i></i><i></i></span></span>
+      <span class="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span>
+    </a>
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="#menu">Our menu</a><a href="#story">Our story</a><a href="#moments">The TiraMio feeling</a><a href="#track">Track order</a>
+    </nav>
+    <div class="header-actions">
+      <button class="text-button track-link" data-open-track>Track order <span>↗</span></button>
+      <button class="cart-trigger" data-open-cart aria-label="Open your box"><span class="bag-icon">▱</span><span>Your box</span><b id="cart-count">0</b></button>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">☰</button>
+    </div>
+  </header>
+  <nav class="mobile-nav" id="mobile-nav"><a href="#menu">Our menu</a><a href="#story">Our story</a><a href="#moments">The TiraMio feeling</a><a href="#track">Track order</a></nav>
+  <main>
+    <section class="hero section-wrap" aria-label="TiraMio premium tiramisu">
+      <div class="hero-poster" aria-hidden="true"><img src="../public/images/tiramio-hero-poster.webp" alt="" /></div>
+      <video class="hero-background-video" src="../public/videos/tiramio-scroll.mp4" poster="../public/images/tiramio-hero-poster.webp" autoplay loop muted playsinline preload="auto" disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
+      <div class="hero-overlay" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> A CLASSIC, WITH A LITTLE LOVE <span class="eyebrow-line"></span></div>
+          <h1>Some days call<br />for <em>another</em><br /><span>spoonful.</span></h1>
+          <p class="hero-tagline">Layers of Love, in Every Bite.</p>
+          <p class="hero-desc">Meet your new little indulgence: soft coffee-kissed layers, dreamy cream and a generous snowfall of cocoa.</p>
+          <div class="hero-actions"><a class="button button-dark" href="#menu">Choose your TiraMio <span>↗</span></a><button class="button button-light" data-open-qr><span class="qr-mini">▦</span> Scan &amp; order</button></div>
+          <div class="hero-proof"><span class="proof-stars">★★★★★</span><span>Made for slow moments &amp; happy spoons</span></div>
+        </div>
+        <div class="hero-art">
+          <div class="hero-image-frame"><img src="../public/images/tiramisu-hero.jpg" alt="Rich layered TiraMio tiramisu close-up" fetchpriority="high" /></div>
+          <div class="hero-stamp"><span>THE</span><b>little<br />luxury</b><span>YOU DESERVE</span><i>✦</i></div>
+          <div class="hero-note"><span class="note-squiggle">〰</span> Made with<br />a little extra love</div>
+        </div>
+      </div>
+      <div class="hero-bottom-note"><span>01</span> THE TIRAMIO EDITION <span class="bottom-rule"></span> MADE TO MAKE YOU SMILE</div>
+    </section>
+    <div class="ticker"><div class="ticker-track"><span class="ticker-set">COFFEE-KISSED LAYERS　✳　 VELVETY CREAM　✳　 COCOA ON TOP　✳　 HAPPINESS IN A BOX　✳　</span><span class="ticker-set">COFFEE-KISSED LAYERS　✳　 VELVETY CREAM　✳　 COCOA ON TOP　✳　 HAPPINESS IN A BOX　✳　</span></div></div>
+    <section class="menu-section section-wrap" id="menu">
+      <div class="section-heading reveal"><div><div class="eyebrow left">THE MENU <span class="eyebrow-line"></span></div><h2>Pick your <em>happy.</em></h2></div><p>Three sizes. One very good decision.<br />Made for a little treat or a lot of sharing.</p></div>
+      <div class="product-grid">
+        <article class="product-card reveal" data-product="mini">
+          <div class="product-photo photo-mini"><img class="product-open-gif" src="../public/images/tiramio-open-mini.webp" alt="TiraMio Mini open dessert box, 100 grams" loading="lazy" /><span class="photo-tag">PERSONAL TREAT</span><button class="quick-add" data-add="mini" aria-label="Add TiraMio Mini">+</button></div>
+          <div class="product-info"><div class="product-meta"><span>01 / MINI</span><span>100 g</span></div><h3>TiraMio Mini</h3><p>Your personal pause. Just enough to make the day sweeter.</p><div class="unit-value unit-standard"><div class="unit-value-top"><strong>₹69 / 100 g</strong></div><span>A lovely little treat</span></div><div class="product-buy"><div class="price-stack"><strong>₹69</strong></div><button class="add-button" data-add="mini">Add to box <span>＋</span></button></div></div>
+        </article>
+        <article class="product-card featured reveal reveal-delay" data-product="classic">
+          <div class="product-photo photo-classic"><img class="product-open-gif" src="../public/images/tiramio-open-classic.webp" alt="TiraMio Classic open dessert box, 200 grams" loading="lazy" /><span class="photo-tag featured-tag">MOST LOVED · SAVE ₹9</span><button class="quick-add" data-add="classic" aria-label="Add TiraMio Classic">+</button></div>
+          <div class="product-info"><div class="product-meta"><span>02 / CLASSIC</span><span>200 g</span></div><h3>TiraMio Classic</h3><p>The just-right box for your favourite dessert moment.</p><div class="unit-value"><div class="unit-value-top"><strong>₹64.50 / 100 g</strong><span class="saving-pill">SAVE ₹9</span></div><span>Save ₹9 compared with two Mini boxes</span></div><div class="product-buy"><div class="price-stack"><strong>₹129</strong><del>₹138</del></div><button class="add-button" data-add="classic">Add to box <span>＋</span></button></div></div>
+        </article>
+        <article class="product-card best-value reveal reveal-delay-2" data-product="share">
+          <div class="product-photo photo-share"><img class="product-open-gif" src="../public/images/tiramio-open-share.webp" alt="TiraMio Share Box open dessert box, 300 grams" loading="lazy" /><span class="photo-tag featured-tag">BEST VALUE · SAVE ₹18</span><button class="quick-add" data-add="share" aria-label="Add TiraMio Share Box">+</button></div>
+          <div class="product-info"><div class="product-meta"><span>03 / SHARE</span><span>300 g</span></div><h3>TiraMio Share Box</h3><p>More layers, more spoons, more reasons to gather.</p><div class="unit-value"><div class="unit-value-top"><strong>₹63 / 100 g</strong><span class="saving-pill">SAVE ₹18</span></div><span>Save ₹18 compared with three Mini boxes</span></div><div class="product-buy"><div class="price-stack"><strong>₹189</strong><del>₹207</del></div><button class="add-button" data-add="share">Add to box <span>＋</span></button></div></div>
+        </article>
+      </div>
+      <div class="menu-foot"><span>✦</span> Not sure which size? Start with the Classic. <a href="#order">Build your box ↓</a></div>
+    </section>
+
+    <section class="story-section" id="story">
+      <div class="story-inner section-wrap">
+        <div class="story-visual reveal"><div class="story-photo"><img src="../public/images/tiramisu-hero.jpg" alt="A spoonful of creamy TiraMio tiramisu" /></div><div class="story-label"><span>MADE WITH CARE</span><strong>Big<br />happiness.</strong><i>✦</i></div><div class="story-caption">A moment worth slowing down for.</div></div>
+        <div class="story-copy reveal reveal-delay"><div class="eyebrow left">A SWEET LITTLE STORY <span class="eyebrow-line"></span></div><h2>Not just dessert.<br /><em>A feeling.</em></h2><p class="story-lead">TiraMio is our love letter to the little moments that deserve something special.</p><p>Inspired by the classic Italian favourite, every box brings together coffee-kissed sponge, soft cream and cocoa in a few perfectly indulgent layers. Made to be opened, shared, savoured — and remembered.</p><div class="story-signoff"><span class="signature">Made with love</span><span class="signoff-heart">♥</span></div><a class="underlined-link" href="#menu">Find your favourite <span>↗</span></a></div>
+      </div>
+    </section>
+
+    <section class="ritual-section section-wrap" id="moments">
+      <div class="section-heading center reveal"><div class="eyebrow">THE TIRAMIO FEELING</div><h2>A little joy, <em>layer by layer.</em></h2><p>For the coffee lover. For the sweet tooth. For the “just one more spoon” person.</p></div>
+      <div class="ritual-grid">
+        <div class="ritual-item reveal"><span class="ritual-icon">☕</span><h3>Coffee-kissed</h3><p>A gentle coffee note in every soft layer.</p></div>
+        <div class="ritual-item reveal reveal-delay"><span class="ritual-icon">〰</span><h3>Cloud-soft cream</h3><p>Silky, smooth and made for slow spoonfuls.</p></div>
+        <div class="ritual-item reveal reveal-delay-2"><span class="ritual-icon">✳</span><h3>Cocoa finish</h3><p>A final dusting of chocolatey goodness.</p></div>
+        <div class="ritual-item reveal reveal-delay-3"><span class="ritual-icon">♡</span><h3>Made to share</h3><p>Little boxes for moments worth keeping.</p></div>
+      </div>
+    </section>
+
+    <section class="order-section" id="order">
+      <div class="order-inner section-wrap">
+        <div class="order-copy reveal"><div class="eyebrow left">YOUR NEXT HAPPY MOMENT <span class="eyebrow-line"></span></div><h2>Good things<br />come in <em>little boxes.</em></h2><p>Build your TiraMio box in a few taps. We’ll help you take it from craving to doorstep.</p><div class="order-perks"><span>✓ Easy WhatsApp ordering</span><span>✓ Pickup or delivery details</span><span>✓ Order status updates</span></div></div>
+        <div class="order-panel reveal reveal-delay"><div class="panel-top"><span>01 — MAKE IT YOURS</span><span class="panel-dot">●</span></div><h3>Build your box</h3><p class="panel-subtitle">Choose your favourites to get started.</p>
+          <div class="builder-item"><div><b>TiraMio Mini</b><small>100 g · ₹69</small></div><div class="stepper"><button data-qty="mini" data-dir="-1" aria-label="Decrease Mini">−</button><output id="qty-mini">0</output><button data-qty="mini" data-dir="1" aria-label="Increase Mini">+</button></div></div>
+          <div class="builder-item"><div><b>TiraMio Classic</b><small>200 g · ₹129</small></div><div class="stepper"><button data-qty="classic" data-dir="-1" aria-label="Decrease Classic">−</button><output id="qty-classic">0</output><button data-qty="classic" data-dir="1" aria-label="Increase Classic">+</button></div></div>
+          <div class="builder-item"><div><b>TiraMio Share Box</b><small>300 g · ₹189</small></div><div class="stepper"><button data-qty="share" data-dir="-1" aria-label="Decrease Share Box">−</button><output id="qty-share">0</output><button data-qty="share" data-dir="1" aria-label="Increase Share Box">+</button></div></div>
+          <div class="panel-total"><span>Your box total</span><strong id="builder-total">₹0</strong></div>
+          <button class="button button-dark button-full" id="continue-order">Continue to details <span>↗</span></button>
+          <p class="panel-note">No payment required to send an enquiry. Confirm availability with us on WhatsApp.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="track-section section-wrap" id="track">
+      <div class="track-card reveal"><div class="track-copy"><div class="eyebrow left">A LITTLE UPDATE, RIGHT ON TIME <span class="eyebrow-line"></span></div><h2>Where’s my <em>TiraMio?</em></h2><p>Have an order reference? Follow your order from confirmation to the first spoonful.</p><button class="button button-cream" data-open-track>Track my order <span>↗</span></button></div><div class="track-visual"><div class="track-route"><span class="route-dot active"></span><span class="route-line"></span><span class="route-dot"></span><span class="route-line"></span><span class="route-dot"></span><span class="route-line"></span><span class="route-dot"></span></div><div class="track-stages"><span>Placed</span><span>Preparing</span><span>On the way</span><span>Delivered</span></div><div class="track-box">TiraMio<br /><small>on its way to you ♡</small></div></div></div>
+    </section>
+
+    <section class="scan-section section-wrap">
+      <div class="scan-card reveal"><div class="scan-copy"><div class="eyebrow left">QUICK AS A SCAN <span class="eyebrow-line"></span></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with TiraMio. No long forms, no fuss — just your next favourite dessert.</p><a class="underlined-link" href="https://wa.me/918433198122?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu." target="_blank" rel="noreferrer">Chat with us <span>↗</span></a></div><div class="scan-code-wrap"><div class="scan-qr-frame"><img src="../public/images/order-qr.png" alt="QR code to order TiraMio on WhatsApp" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></div>
+    </section>
+
+    <section class="closing-section"><div class="closing-inner section-wrap"><span class="closing-flourish">✳</span><p>One last spoon?</p><h2>Make room for <em>sweet things.</em></h2><a class="button button-cream" href="#menu">Order your TiraMio <span>↗</span></a><span class="closing-flourish">✳</span></div></section>
+  </main>
+  <footer class="site-footer"><div class="footer-main section-wrap"><div class="footer-brand"><a class="brand brand-footer" href="#top"><span class="brand-mark"><span class="cake-stack"><i></i><i></i><i></i></span></span><span class="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a><p>Layers of Love, in Every Bite.</p></div><div class="footer-links"><div><b>EXPLORE</b><a href="#menu">Our menu</a><a href="#story">Our story</a><a href="#track">Track order</a></div><div><b>SAY HELLO</b><a href="https://wa.me/918433198122" target="_blank" rel="noreferrer">WhatsApp us</a><button data-open-qr>Scan & order</button><span>Instagram: @TiraMioTiramisu*</span></div><div><b>GOOD TO KNOW</b><span>Dessert made with care</span><span>Pickup / delivery confirmation</span><span>*Handle availability to be checked</span></div></div></div><div class="footer-bottom section-wrap"><span>© <span id="year"></span> TiraMio Tiramisu</span><span>Made with a little extra love <b>♥</b></span><a href="#top">Back to top ↑</a></div></footer>
+
+  <div class="floating-order"><button class="floating-whatsapp" data-open-qr><span>▦</span> Scan & order</button><button class="floating-cart" data-open-cart>Box <b id="floating-count">0</b><strong id="floating-total">₹0</strong></button></div>
+
+  <div class="modal-backdrop" id="cart-modal" aria-hidden="true"><div class="modal modal-cart" role="dialog" aria-modal="true" aria-labelledby="cart-title"><button class="modal-close" data-close="cart-modal" aria-label="Close">×</button><div class="eyebrow left">YOUR LITTLE BOX <span class="eyebrow-line"></span></div><h2 id="cart-title">A good choice.</h2><div id="cart-lines" class="cart-lines"><p class="empty-cart">Your box is waiting for something delicious.</p></div><div class="cart-footer"><div class="panel-total"><span>Subtotal</span><strong id="cart-subtotal">₹0</strong></div><button class="button button-dark button-full" id="cart-checkout">Continue to details <span>↗</span></button></div></div></div>
+
+  <div class="modal-backdrop" id="checkout-modal" aria-hidden="true"><div class="modal modal-checkout" role="dialog" aria-modal="true" aria-labelledby="checkout-title"><button class="modal-close" data-close="checkout-modal" aria-label="Close">×</button><div class="eyebrow left">JUST A FEW DETAILS <span class="eyebrow-line"></span></div><h2 id="checkout-title">Let’s get you <em>your TiraMio.</em></h2><form id="checkout-form"><div class="form-grid"><label>Your name<input name="name" required placeholder="How should we call you?" maxlength="80" /></label><label>Mobile number<input name="phone" required inputmode="numeric" pattern="[0-9]{10}" placeholder="10-digit mobile number" maxlength="10" /></label><label class="full-span">How would you like it?<select name="fulfilment"><option value="Pickup">I’ll pick it up</option><option value="Delivery">Deliver to me</option></select></label><label class="full-span" id="address-field" hidden>Delivery address<textarea name="address" rows="2" placeholder="House / street / area / landmark"></textarea></label><label class="full-span">Anything we should know? <textarea name="notes" rows="2" placeholder="Delivery timing, special instructions…"></textarea></label><label class="full-span">Payment preference<select name="payment"><option value="Pay on pickup / delivery">Pay on pickup / delivery</option><option value="Online payment (activation needed)">Online payment (activation needed)</option></select></label></div><div class="checkout-summary"><span id="checkout-summary-text">Your box · 0 items</span><strong id="checkout-total">₹0</strong></div><p class="form-disclaimer">This preview sends your order request through WhatsApp. Online payment is not live until your Razorpay account keys are configured.</p><button type="submit" class="button button-dark button-full">Send order on WhatsApp <span>↗</span></button></form></div></div>
+
+  <div class="modal-backdrop" id="track-modal" aria-hidden="true"><div class="modal modal-track" role="dialog" aria-modal="true" aria-labelledby="track-title"><button class="modal-close" data-close="track-modal" aria-label="Close">×</button><div class="eyebrow left">ORDER UPDATES <span class="eyebrow-line"></span></div><h2 id="track-title">Track your <em>box.</em></h2><form id="track-form" class="track-form"><label>Order reference<input name="orderId" required placeholder="e.g. TIRA-2048" /></label><label>Mobile number<input name="phone" required inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="Phone used for order" /></label><button class="button button-dark button-full" type="submit">Find my order <span>↗</span></button></form><div id="track-result" class="track-result" aria-live="polite"><p>Enter your order reference and mobile number to see the latest update.</p></div><p class="form-disclaimer">Tracking in this preview is a demo. Live updates will come from the order database and delivery status updates.</p></div></div>
+
+  <div class="modal-backdrop" id="qr-modal" aria-hidden="true"><div class="modal modal-qr" role="dialog" aria-modal="true" aria-labelledby="qr-title"><button class="modal-close" data-close="qr-modal" aria-label="Close">×</button><div class="eyebrow">THE FASTEST WAY TO TIRAMIO</div><h2 id="qr-title">Scan. Order. <em>Smile.</em></h2><div class="qr-large"><img src="../public/images/order-qr.png" alt="Scan to start a TiraMio WhatsApp order" /></div><p>Point your camera here to start a WhatsApp order.</p><a class="button button-dark button-full" href="https://wa.me/918433198122?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu." target="_blank" rel="noreferrer">Open WhatsApp <span>↗</span></a><small>8433198122</small></div></div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
