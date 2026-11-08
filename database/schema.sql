@@ -84,9 +84,9 @@ CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id);
 
 INSERT INTO products (slug, name, weight_grams, price_paise, short_description, badge, image_url, sort_order)
 VALUES
-  ('mini', 'TiraMio Mini', 100, 6900, 'Your personal pause. Just enough to make the day sweeter.', 'A LITTLE TREAT', '/images/tiramio-box-mini.webp', 1),
-  ('classic', 'TiraMio Classic', 200, 12900, 'The just-right box for your favourite dessert moment.', 'THE CROWD FAVOURITE', '/images/tiramio-box-classic.webp', 2),
-  ('share', 'TiraMio Share Box', 300, 18900, 'More layers, more spoons, more reasons to gather.', 'MADE FOR SHARING', '/images/tiramio-box-share.webp', 3)
+  ('mini', 'TiraMio Mini', 100, 6900, 'Your personal pause. Just enough to make the day sweeter.', 'PERSONAL TREAT · SAVE ₹10', '/images/tiramio-box-mini.webp', 1),
+  ('classic', 'TiraMio Classic', 200, 12900, 'The just-right box for your favourite dessert moment.', 'MOST LOVED · SAVE ₹11', '/images/tiramio-box-classic.webp', 2),
+  ('share', 'TiraMio Share Box', 300, 18900, 'More layers, more spoons, more reasons to gather.', 'BEST VALUE · SAVE ₹21', '/images/tiramio-box-share.webp', 3)
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   weight_grams = EXCLUDED.weight_grams,

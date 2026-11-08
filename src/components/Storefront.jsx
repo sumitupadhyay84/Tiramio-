@@ -16,9 +16,9 @@ const productImages = {
   share: '/images/tiramio-share-card.webp'
 };
 const products = [
-  { id: 'mini', name: 'TiraMio Mini', weight: '100 g', price: 69, referencePrice: 69, saving: 0, description: 'Your personal pause. Just enough to make the day sweeter.', image: productImages.mini, tag: 'PERSONAL TREAT', unitValue: '₹69 / 100 g', valueNote: 'A lovely little treat' },
-  { id: 'classic', name: 'TiraMio Classic', weight: '200 g', price: 129, referencePrice: 138, saving: 9, description: 'The just-right box for your favourite dessert moment.', image: productImages.classic, tag: 'MOST LOVED · SAVE ₹9', unitValue: '₹64.50 / 100 g', valueNote: 'Save ₹9 compared with two Mini boxes' },
-  { id: 'share', name: 'TiraMio Share Box', weight: '300 g', price: 189, referencePrice: 207, saving: 18, description: 'More layers, more spoons, more reasons to gather.', image: productImages.share, tag: 'BEST VALUE · SAVE ₹18', unitValue: '₹63 / 100 g', valueNote: 'Save ₹18 compared with three Mini boxes' }
+  { id: 'mini', name: 'TiraMio Mini', weight: '100 g', price: 69, referencePrice: 79, saving: 10, description: 'Your personal pause. Just enough to make the day sweeter.', image: productImages.mini, tag: 'PERSONAL TREAT · SAVE ₹10', unitValue: '₹69 / 100 g', valueNote: 'Save ₹10 on your personal box' },
+  { id: 'classic', name: 'TiraMio Classic', weight: '200 g', price: 129, referencePrice: 140, saving: 11, description: 'The just-right box for your favourite dessert moment.', image: productImages.classic, tag: 'MOST LOVED · SAVE ₹11', unitValue: '₹129 / 200 g', valueNote: 'Save ₹9 compared with two Mini boxes' },
+  { id: 'share', name: 'TiraMio Share Box', weight: '300 g', price: 189, referencePrice: 210, saving: 21, description: 'More layers, more spoons, more reasons to gather.', image: productImages.share, tag: 'BEST VALUE · SAVE ₹21', unitValue: '₹189 / 300 g', valueNote: 'Save ₹18 compared with three Mini boxes' }
 ];
 const api = process.env.NEXT_PUBLIC_API_URL || '';
 const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918433198122';
@@ -30,7 +30,7 @@ function Reveal({ children, className = '', delay = 0 }) {
 }
 
 function TiramisuHeroModel() {
-  const group = useRef();
+  const group = useRef(null);
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
@@ -158,16 +158,18 @@ export default function Storefront() {
     if (!api) return;
     let active = true;
     fetch(`${api}/api/products`).then(response => { if (!response.ok) throw new Error('Catalogue unavailable'); return response.json(); })
-      .then(data => { if (!active || !Array.isArray(data.products) || !data.products.length) return; setCatalogue(data.products.map(item => ({
-        id: item.id, name: item.name, weight: `${item.weightGrams} g`, price: Number(item.price),
-        referencePrice: Math.round((Number(item.weightGrams || 100) / 100) * 69),
-        saving: Math.max(0, Math.round((Number(item.weightGrams || 100) / 100) * 69) - Number(item.price)),
-        description: item.shortDescription || 'A little dessert moment, made for you.',
-        image: productImages[item.id] || productVisual,
-        tag: item.id === 'share' ? 'BEST VALUE · SAVE ₹18' : item.id === 'classic' ? 'MOST LOVED · SAVE ₹9' : 'PERSONAL TREAT',
-        unitValue: `₹${(Number(item.price) * 100 / Number(item.weightGrams || 100)).toFixed(2).replace(/\.00$/, '')} / 100 g`,
-        valueNote: item.id === 'share' ? 'Save ₹18 compared with three Mini boxes' : item.id === 'classic' ? 'Save ₹9 compared with two Mini boxes' : 'A lovely little treat'
-      }))); })
+      .then(data => {
+        if (!active || !Array.isArray(data.products) || !data.products.length) return; setCatalogue(data.products.map(item => ({
+          id: item.id, name: item.name, weight: `${item.weightGrams} g`, price: Number(item.price),
+          referencePrice: item.id === 'mini' ? 79 : item.id === 'classic' ? 140 : 210,
+          saving: item.id === 'mini' ? 10 : item.id === 'classic' ? 11 : 21,
+          description: item.shortDescription || 'A little dessert moment, made for you.',
+          image: productImages[item.id] || productVisual,
+          tag: item.id === 'share' ? 'BEST VALUE · SAVE ₹21' : item.id === 'classic' ? 'MOST LOVED · SAVE ₹11' : 'PERSONAL TREAT · SAVE ₹10',
+          unitValue: `₹${Number(item.price)} / ${item.weightGrams || 100} g`,
+          valueNote: item.id === 'share' ? 'Save ₹18 compared with three Mini boxes' : item.id === 'classic' ? 'Save ₹9 compared with two Mini boxes' : 'Save ₹10 on your personal box'
+        })));
+      })
       .catch(() => { /* Keep the bundled menu as a resilient fallback. */ });
     return () => { active = false; };
   }, []);
@@ -265,9 +267,9 @@ export default function Storefront() {
       <div className="scroll-progress"><span className="progress-bar" /></div>
       <div className="announcement"><span className="sparkle">✦</span> A little box of happiness, made with care <span className="sparkle">✦</span></div>
       <header ref={headerRef} className="site-header" id="top">
-        <a className="brand" href="#top" aria-label="TiraMio home"><span className="brand-mark"><span className="cake-stack"><i/><i/><i/></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
+        <a className="brand" href="#top" aria-label="TiraMio home"><span className="brand-mark"><span className="cake-stack"><i /><i /><i /></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
         <nav className="desktop-nav"><a href="#menu">Our Menu</a><a href="#story">Our Story</a><a href="#moments">The TiraMio Feeling</a><a href="#track">Track Order</a></nav>
-        <div className="header-actions"><button className="cart-trigger" onClick={() => open('cart')}><ShoppingBag size={16}/><span>Your Box</span><b>{count}</b></button><button className="menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation">{mobileNav ? <X/> : <Menu/>}</button></div>
+        <div className="header-actions"><button className="cart-trigger" onClick={() => open('cart')}><ShoppingBag size={16} /><span>Your Box</span><b>{count}</b></button><button className="menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation">{mobileNav ? <X /> : <Menu />}</button></div>
       </header>
       {mobileNav && <nav className="mobile-nav open"><a onClick={() => setMobileNav(false)} href="#menu">Our Menu</a><a onClick={() => setMobileNav(false)} href="#story">Our Story</a><a onClick={() => setMobileNav(false)} href="#moments">The TiraMio Feeling</a><a onClick={() => { setMobileNav(false); open('track'); }} href="#track">Track Order</a></nav>}
       <main>
@@ -285,7 +287,7 @@ export default function Storefront() {
           </div>
           <div className="hero-inner">
             <div className="hero-copy">
-              <div className="eyebrow reveal-block"><span className="eyebrow-line"/> A CLASSIC, WITH A LITTLE LOVE <span className="eyebrow-line"/></div>
+              <div className="eyebrow reveal-block"><span className="eyebrow-line" /> A CLASSIC, WITH A LITTLE LOVE <span className="eyebrow-line" /></div>
               <h1 className="hero-title reveal-block">
                 <span className="hero-word-line"><span className="hero-word">Some</span> <span className="hero-word">days</span> <span className="hero-word">call</span></span>
                 <span className="hero-word-line"><span className="hero-word">for</span> <span className="hero-word hero-word-accent">another</span></span>
@@ -294,8 +296,8 @@ export default function Storefront() {
               <p className="hero-tagline reveal-block">Layers of Love, in Every Bite.</p>
               <p className="hero-desc reveal-block">Meet your new little indulgence: soft coffee-kissed layers, dreamy cream and a generous snowfall of cocoa.</p>
               <div className="hero-actions reveal-block">
-                <a className="button button-dark" href="#menu">Explore Our Desserts <ArrowUpRight size={16}/></a>
-                <button className="button button-light" onClick={() => open('qr')}><CirclePlay size={18}/> Discover Our Story</button>
+                <a className="button button-dark" href="#menu">Explore Our Desserts <ArrowUpRight size={16} /></a>
+                <button className="button button-light" onClick={() => open('qr')}><CirclePlay size={18} /> Discover Our Story</button>
               </div>
               <div className="hero-proof reveal-block"><span className="proof-stars">★★★★★</span><span>4.9 (2,300+ happy dessert lovers)</span></div>
             </div>
@@ -304,8 +306,8 @@ export default function Storefront() {
             <div className="hero-product-portrait">
               <img src={productVisual} alt="A premium cocoa-dusted tiramisu dessert cup" fetchPriority="high" />
             </div>
-            <div className="hero-note" aria-hidden="true">Made with<br/><em>love ♡</em></div>
-            <div className="hero-badge"><span>THE</span><strong>Little<br/>Luxury</strong><em>You Deserve</em></div>
+            <div className="hero-note" aria-hidden="true">Made with<br /><em>love ♡</em></div>
+            <div className="hero-badge"><span>THE</span><strong>Little<br />Luxury</strong><em>You Deserve</em></div>
           </div>
           <div className="hero-scroll"><span>Scroll to explore</span><span className="scroll-arrow">⌄</span></div>
           <WaveDivider variant="hero" fill="var(--paper)" underFill="rgba(198, 163, 106, 0.16)" stroke="rgba(198, 163, 106, 0.55)" />
@@ -314,43 +316,43 @@ export default function Storefront() {
           <div className="menu-content">
             <Reveal className="section-heading">
               <div>
-                <div className="eyebrow left">THE MENU <span className="eyebrow-line"/></div>
+                <div className="eyebrow left">THE MENU <span className="eyebrow-line" /></div>
                 <h2>Pick your <em>happy.</em></h2>
                 <p>Three sizes. One very good decision. Made for a little treat or a lot of sharing.</p>
               </div>
             </Reveal>
-          <div className="product-grid">{catalogue.map((item,index)=>(
-            <Reveal key={item.id} delay={index*.1} className={`product-card ${item.id==='classic'?'featured':''} ${item.id==='share'?'best-value':''}`}>
-              <div className={`product-photo photo-${item.id}`}>
-                <img className="product-open-gif" src={item.image} alt={`${item.name}, ${item.weight} tiramisu served on a plate`} loading="lazy" decoding="async" />
-                <span className={`photo-tag ${item.id!=='mini'?'featured-tag':''}`}>
-                  {item.id === 'mini' ? <Sparkles size={15} fill="currentColor" /> : item.id === 'classic' ? <Heart size={16} fill="currentColor" /> : <Package size={15} />}
-                  {item.tag}
-                </span>
-                <span className="product-favorite" aria-hidden="true"><Heart size={25} /></span>
-              </div>
-              <div className="product-info">
-                <div className="product-meta"><span>0{index+1} / {item.id.toUpperCase()}</span><span>{item.weight}</span></div>
-                <h3>{item.name}</h3>
-                <p>{item.description}</p>
-                <div className="product-buy">
-                  <div className="listing-price">
-                    <div className="listing-price-line">
-                      <strong>{item.unitValue}</strong>
-                      {item.saving > 0 && <del>{money(item.id === 'classic' ? item.referencePrice / 2 : item.referencePrice)}</del>}
-                      {item.saving > 0 && <span className="saving-pill">SAVE {money(item.saving)}</span>}
-                    </div>
-                    <small>Box total {money(item.price)}</small>
-                  </div>
-                  <button className="add-button listing-add" onClick={() => updateQty(item.id,1)}>Add to box <span>＋</span></button>
+            <div className="product-grid">{catalogue.map((item, index) => (
+              <Reveal key={item.id} delay={index * .1} className={`product-card ${item.id === 'classic' ? 'featured' : ''} ${item.id === 'share' ? 'best-value' : ''}`}>
+                <div className={`product-photo photo-${item.id}`}>
+                  <img className="product-open-gif" src={item.image} alt={`${item.name}, ${item.weight} tiramisu served on a plate`} loading="lazy" decoding="async" />
+                  <span className={`photo-tag ${item.saving > 0 ? 'featured-tag' : ''}`}>
+                    {item.id === 'mini' ? <Sparkles size={15} fill="currentColor" /> : item.id === 'classic' ? <Heart size={16} fill="currentColor" /> : <Package size={15} />}
+                    {item.tag}
+                  </span>
+                  <span className="product-favorite" aria-hidden="true"><Heart size={25} /></span>
                 </div>
-              </div>
-            </Reveal>
-          ))}</div>
+                <div className="product-info">
+                  <div className="product-meta"><span>0{index + 1} / {item.id.toUpperCase()}</span><span>{item.weight}</span></div>
+                  <h3>{item.name}</h3>
+                  <p>{item.description}</p>
+                  <div className="product-buy">
+                    <div className="listing-price">
+                      <div className="listing-price-line">
+                        <strong>{item.unitValue}</strong>
+                        {item.saving > 0 && <del>{money(item.referencePrice)}</del>}
+                        {item.saving > 0 && <span className="saving-pill">SAVE {money(item.saving)}</span>}
+                      </div>
+                      <small>Box total {money(item.price)}</small>
+                    </div>
+                    <button className="add-button listing-add" onClick={() => updateQty(item.id, 1)}>Add to box <span>＋</span></button>
+                  </div>
+                </div>
+              </Reveal>
+            ))}</div>
           </div>
           <div className="menu-foot">
             <div className="menu-foot-inner">
-              <span className="menu-foot-mark" aria-hidden="true"><Package size={21}/></span>
+              <span className="menu-foot-mark" aria-hidden="true"><Package size={21} /></span>
               <div className="menu-foot-copy">
                 <span className="menu-foot-eyebrow">A LITTLE HELP CHOOSING</span>
                 <p>Not sure which size? <strong>Start with the Classic.</strong></p>
@@ -359,7 +361,7 @@ export default function Storefront() {
                 <span>THE CROWD FAVORITE</span>
                 <strong>Classic <i>200 g · ₹129</i></strong>
               </div>
-              <button className="text-button" onClick={() => { updateQty('classic', 1); open('cart'); }}>Start with Classic <ArrowUpRight size={16}/></button>
+              <button className="text-button" onClick={() => { updateQty('classic', 1); open('cart'); }}>Start with Classic <ArrowUpRight size={16} /></button>
             </div>
           </div>
         </section>
@@ -485,57 +487,57 @@ export default function Storefront() {
         <WaveDivider variant="to-light" bg="#241108" fill="var(--paper)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
         <ExperienceSection onTrackOrder={() => open('track')} />
         <CurveDivider />
-        <section className="scan-section"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line"/></div><h2>Craving? <em>Scan.</em><br/>Order. Smile.</h2><p>Scan to open a WhatsApp chat with TiraMio. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15}/></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order TiraMio on WhatsApp"/></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
+        <section className="scan-section"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with TiraMio. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order TiraMio on WhatsApp" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
         <WaveDivider variant="to-dark" bg="var(--paper)" fill="var(--espresso)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
-        <section className="closing-section"><div className="closing-inner section-wrap"><div className="closing-emblem" aria-hidden="true"><span/><span className="closing-cake"><i/><i/><i/></span><span/></div><p>One last spoon?</p><h2>Make room for <em>sweet things.</em></h2><a className="button button-cream" href="#menu">Order your TiraMio <ArrowUpRight size={16}/></a></div></section>
+        <section className="closing-section"><div className="closing-inner section-wrap"><div className="closing-emblem" aria-hidden="true"><span /><span className="closing-cake"><i /><i /><i /></span><span /></div><p>One last spoon?</p><h2>Make room for <em>sweet things.</em></h2><a className="button button-cream" href="#menu">Order your TiraMio <ArrowUpRight size={16} /></a></div></section>
       </main>
       <CurveDivider />
       <footer className="site-footer">
         <div className="footer-divider section-wrap" aria-hidden="true"><span>✦</span></div>
         <div className="footer-main section-wrap">
           <div className="footer-brand">
-            <a className="brand brand-footer" href="#top"><span className="brand-mark"><span className="cake-stack"><i/><i/><i/></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
+            <a className="brand brand-footer" href="#top"><span className="brand-mark"><span className="cake-stack"><i /><i /><i /></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
             <p>Layers of Love, in Every Bite.</p>
             <div className="footer-socials" aria-label="Social media">
-              <a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20}/></a>
-              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={20}/></a>
-              <a href="https://www.youtube.com/" target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube size={20}/></a>
+              <a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
+              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={20} /></a>
+              <a href="https://www.youtube.com/" target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube size={20} /></a>
             </div>
           </div>
           <div className="footer-links">
             <div><b>EXPLORE</b><a href="#menu">Our Menu</a><a href="#story">Our Story</a><a href="#track">Track Order</a></div>
-            <div><b>SAY HELLO</b><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={20}/>WhatsApp Us</a><button onClick={()=>open('qr')}><QrCode size={20}/>Scan &amp; Order</button><a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer"><Instagram size={20}/>Instagram: @TiraMioTiramisu*</a></div>
-            <div><b>GOOD TO KNOW</b><span><Package size={20}/>Dessert made with care</span><span><Truck size={20}/>Pickup / Delivery Confirmation</span><span><Info size={20}/>*Handle availability to be checked</span></div>
+            <div><b>SAY HELLO</b><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp Us</a><button onClick={() => open('qr')}><QrCode size={20} />Scan &amp; Order</button><a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer"><Instagram size={20} />Instagram: @TiraMioTiramisu*</a></div>
+            <div><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span><span><Info size={20} />*Handle availability to be checked</span></div>
           </div>
         </div>
-        <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} TiraMio Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20}/></b></span><a href="#top">Back to top <ArrowUpRight size={17}/></a></div>
+        <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} TiraMio Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20} /></b></span><a href="#top">Back to top <ArrowUpRight size={17} /></a></div>
       </footer>
 
-      <div className="floating-order"><button className="floating-whatsapp" onClick={()=>open('qr')}><QrCode size={15}/> Scan & order</button><button className="floating-cart" onClick={()=>open('cart')}>Box <b>{count}</b><strong>{money(total)}</strong></button></div>
+      <div className="floating-order"><button className="floating-whatsapp" onClick={() => open('qr')}><QrCode size={15} /> Scan & order</button><button className="floating-cart" onClick={() => open('cart')}>Box <b>{count}</b><strong>{money(total)}</strong></button></div>
 
-      {modal === 'cart' && <Modal onClose={close} className="cart-modal" showHeader={false}><div className="cart-modal-art"><img src={productVisual} alt="Cocoa-dusted tiramisu in a glass dessert cup"/></div><div className="cart-modal-copy"><div className="eyebrow left">YOUR LITTLE BOX <span className="eyebrow-line"/></div><h2>A Good Choice.</h2>{chosen.length ? <div className="cart-lines">{chosen.map(item=><div className="cart-line" key={item.id}><div><strong>{item.name}</strong><small>{item.weight} · {money(item.price)} each</small></div><div className="cart-line-actions"><button onClick={()=>updateQty(item.id,-1)} aria-label={`Remove one ${item.name}`}><Minus size={11}/></button><b>{qty[item.id]}</b><button onClick={()=>updateQty(item.id,1)} aria-label={`Add one ${item.name}`}><Plus size={11}/></button></div><strong>{money(item.price*qty[item.id])}</strong></div>)}</div> : <p className="empty-cart">Your box is waiting for something delicious.</p>}<div className="cart-footer"><div className="cart-summary"><span><ShoppingBag size={15}/>Subtotal</span><strong>{money(total)}</strong></div><button className="button button-dark button-full" onClick={showCheckout}><ShoppingBag size={16}/>Continue to Details <ArrowUpRight size={17}/></button></div></div></Modal>}
+      {modal === 'cart' && <Modal onClose={close} className="cart-modal" showHeader={false}><div className="cart-modal-art"><img src={productVisual} alt="Cocoa-dusted tiramisu in a glass dessert cup" /></div><div className="cart-modal-copy"><div className="eyebrow left">YOUR LITTLE BOX <span className="eyebrow-line" /></div><h2>A Good Choice.</h2>{chosen.length ? <div className="cart-lines">{chosen.map(item => <div className="cart-line" key={item.id}><div><strong>{item.name}</strong><small>{item.weight} · {money(item.price)} each</small></div><div className="cart-line-actions"><button onClick={() => updateQty(item.id, -1)} aria-label={`Remove one ${item.name}`}><Minus size={11} /></button><b>{qty[item.id]}</b><button onClick={() => updateQty(item.id, 1)} aria-label={`Add one ${item.name}`}><Plus size={11} /></button></div><strong>{money(item.price * qty[item.id])}</strong></div>)}</div> : <p className="empty-cart">Your box is waiting for something delicious.</p>}<div className="cart-footer"><div className="cart-summary"><span><ShoppingBag size={15} />Subtotal</span><strong>{money(total)}</strong></div><button className="button button-dark button-full" onClick={showCheckout}><ShoppingBag size={16} />Continue to Details <ArrowUpRight size={17} /></button></div></div></Modal>}
 
-      {modal === 'checkout' && <Modal title={<>Let’s get you <em>your TiraMio.</em></>} eyebrow="JUST A FEW DETAILS" onClose={close} wide><form onSubmit={submitOrder}><div className="form-grid"><label>Your name<input required maxLength={80} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="How should we call you?"/></label><label>Mobile number<input required inputMode="numeric" maxLength={10} value={form.phone} onChange={e=>setForm({...form,phone:e.target.value.replace(/\D/g,'').slice(0,10)})} placeholder="10-digit mobile number"/></label><label className="full-span">How would you like it?<select value={form.fulfilment} onChange={e=>setForm({...form,fulfilment:e.target.value})}><option>Pickup</option><option>Delivery</option></select></label>{form.fulfilment==='Delivery' && <label className="full-span">Delivery address<textarea required rows={2} value={form.address} onChange={e=>setForm({...form,address:e.target.value})} placeholder="House / street / area / landmark"/></label>}<label className="full-span">Anything we should know?<textarea rows={2} value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Preferred timing, special instructions…"/></label><label className="full-span">Payment preference<select value={form.payment} onChange={e=>setForm({...form,payment:e.target.value})}><option>Pay on pickup / delivery</option><option>Online payment</option></select></label></div><div className="checkout-summary"><span>Your box · {count} item{count===1?'':'s'}</span><strong>{money(total)}</strong></div><p className="form-disclaimer">WhatsApp ordering is available now. Online payment requires your Razorpay merchant account and configured server keys.</p><button className="button button-dark button-full" type="submit" disabled={busy}>{busy?'Preparing your order…':form.payment==='Online payment'?'Continue to secure payment':'Send order on WhatsApp'} <ArrowUpRight size={16}/></button></form></Modal>}
+      {modal === 'checkout' && <Modal title={<>Let’s get you <em>your TiraMio.</em></>} eyebrow="JUST A FEW DETAILS" onClose={close} wide><form onSubmit={submitOrder}><div className="form-grid"><label>Your name<input required maxLength={80} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="How should we call you?" /></label><label>Mobile number<input required inputMode="numeric" maxLength={10} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10-digit mobile number" /></label><label className="full-span">How would you like it?<select value={form.fulfilment} onChange={e => setForm({ ...form, fulfilment: e.target.value })}><option>Pickup</option><option>Delivery</option></select></label>{form.fulfilment === 'Delivery' && <label className="full-span">Delivery address<textarea required rows={2} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="House / street / area / landmark" /></label>}<label className="full-span">Anything we should know?<textarea rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Preferred timing, special instructions…" /></label><label className="full-span">Payment preference<select value={form.payment} onChange={e => setForm({ ...form, payment: e.target.value })}><option>Pay on pickup / delivery</option><option>Online payment</option></select></label></div><div className="checkout-summary"><span>Your box · {count} item{count === 1 ? '' : 's'}</span><strong>{money(total)}</strong></div><p className="form-disclaimer">WhatsApp ordering is available now. Online payment requires your Razorpay merchant account and configured server keys.</p><button className="button button-dark button-full" type="submit" disabled={busy}>{busy ? 'Preparing your order…' : form.payment === 'Online payment' ? 'Continue to secure payment' : 'Send order on WhatsApp'} <ArrowUpRight size={16} /></button></form></Modal>}
 
-      {modal === 'track' && <Modal title={<>Track your <em>box.</em></>} eyebrow="ORDER UPDATES" onClose={close}><form className="track-form" onSubmit={trackOrder}><label>Order reference<input required value={trackingForm.orderId} onChange={e=>setTrackingForm({...trackingForm,orderId:e.target.value})} placeholder="e.g. TIRA-2048"/></label><label>Mobile number<input required inputMode="numeric" maxLength={10} value={trackingForm.phone} onChange={e=>setTrackingForm({...trackingForm,phone:e.target.value.replace(/\D/g,'').slice(0,10)})} placeholder="Phone used for order"/></label><button className="button button-dark button-full" type="submit">Find my order <ArrowUpRight size={16}/></button></form>{trackingError && <div className="track-result"><p>{trackingError}</p></div>}{tracking && <div className="track-result"><h3>{tracking.orderRef} · {String(tracking.status).replaceAll('_',' ')}</h3><p>{tracking.customerName} · {tracking.fulfilment} · {money(tracking.total)}</p>{stageLabels.map((label,i)=><div className="status-line" key={label}><span className={`status-dot ${i<=currentStage?'complete':''}`}/><div className="status-copy"><b>{label}</b><small>{stageDescriptions[i]}</small></div></div>)}{tracking.events?.length>0 && <div className="tracking-events"><b>Latest updates</b>{tracking.events.map((event,i)=><p key={i}>{String(event.status).replaceAll('_',' ')} · {new Date(event.created_at).toLocaleString()}</p>)}</div>}</div>}<p className="form-disclaimer">Live order status appears after the Express API and PostgreSQL database are connected.</p></Modal>}
+      {modal === 'track' && <Modal title={<>Track your <em>box.</em></>} eyebrow="ORDER UPDATES" onClose={close}><form className="track-form" onSubmit={trackOrder}><label>Order reference<input required value={trackingForm.orderId} onChange={e => setTrackingForm({ ...trackingForm, orderId: e.target.value })} placeholder="e.g. TIRA-2048" /></label><label>Mobile number<input required inputMode="numeric" maxLength={10} value={trackingForm.phone} onChange={e => setTrackingForm({ ...trackingForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="Phone used for order" /></label><button className="button button-dark button-full" type="submit">Find my order <ArrowUpRight size={16} /></button></form>{trackingError && <div className="track-result"><p>{trackingError}</p></div>}{tracking && <div className="track-result"><h3>{tracking.orderRef} · {String(tracking.status).replaceAll('_', ' ')}</h3><p>{tracking.customerName} · {tracking.fulfilment} · {money(tracking.total)}</p>{stageLabels.map((label, i) => <div className="status-line" key={label}><span className={`status-dot ${i <= currentStage ? 'complete' : ''}`} /><div className="status-copy"><b>{label}</b><small>{stageDescriptions[i]}</small></div></div>)}{tracking.events?.length > 0 && <div className="tracking-events"><b>Latest updates</b>{tracking.events.map((event, i) => <p key={i}>{String(event.status).replaceAll('_', ' ')} · {new Date(event.created_at).toLocaleString()}</p>)}</div>}</div>}<p className="form-disclaimer">Live order status appears after the Express API and PostgreSQL database are connected.</p></Modal>}
 
       {modal === 'qr' && <Modal onClose={close} className="qr-order-modal" showHeader={false}>
         <div className="qr-order-layout">
           <div className="qr-order-visual" aria-label="Tiramisu made for your next happy moment">
-            <p>Order on<br/>WhatsApp <span>♡</span></p>
-            <svg className="qr-visual-arrow" viewBox="0 0 70 38" aria-hidden="true"><path d="M2 2C22 6 39 15 62 30M50 27l12 3-5-12"/></svg>
+            <p>Order on<br />WhatsApp <span>♡</span></p>
+            <svg className="qr-visual-arrow" viewBox="0 0 70 38" aria-hidden="true"><path d="M2 2C22 6 39 15 62 30M50 27l12 3-5-12" /></svg>
           </div>
           <div className="qr-order-panel">
-            <div className="eyebrow left">THE FASTEST WAY TO TIRAMIO <span className="eyebrow-line"/></div>
+            <div className="eyebrow left">THE FASTEST WAY TO TIRAMIO <span className="eyebrow-line" /></div>
             <h2>Scan. Order. <em>Smile.</em></h2>
             <div className="qr-code-decoration">
-              <span className="qr-ray qr-ray-left" aria-hidden="true"/>
-              <div className="qr-code-frame"><img src="/images/order-qr.png" alt="Scan to start a TiraMio WhatsApp order"/></div>
-              <span className="qr-ray qr-ray-right" aria-hidden="true"/>
+              <span className="qr-ray qr-ray-left" aria-hidden="true" />
+              <div className="qr-code-frame"><img src="/images/order-qr.png" alt="Scan to start a TiraMio WhatsApp order" /></div>
+              <span className="qr-ray qr-ray-right" aria-hidden="true" />
             </div>
             <p className="qr-caption">Point your camera here to start a WhatsApp order.</p>
-            <a className="qr-whatsapp-cta" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer"><span className="whatsapp-mark"><MessageCircle/><Phone/></span> Open WhatsApp <ArrowUpRight size={17}/></a>
-            <div className="qr-phone"><span/><Phone size={15}/><a href={`tel:${whatsapp}`}>8433198122</a><span/></div>
+            <a className="qr-whatsapp-cta" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer"><span className="whatsapp-mark"><MessageCircle /><Phone /></span> Open WhatsApp <ArrowUpRight size={17} /></a>
+            <div className="qr-phone"><span /><Phone size={15} /><a href={`tel:${whatsapp}`}>8433198122</a><span /></div>
           </div>
         </div>
       </Modal>}
@@ -681,6 +683,6 @@ function ScallopedBadge() {
   );
 }
 
-function Modal({ children, title, eyebrow, onClose, wide = false, className = '', showHeader = true }) {
-  return <div className={`modal-backdrop open${className ? ` ${className}-backdrop` : ''}`} role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}><div className={`modal ${wide?'modal-checkout':''} ${className}`} role="dialog" aria-modal="true"><button className="modal-close" onClick={onClose} aria-label="Close"><X size={22}/></button>{showHeader && <><div className="eyebrow left">{eyebrow} <span className="eyebrow-line"/></div><h2>{title}</h2></>}{children}</div></div>;
+function Modal({ children, title = '', eyebrow = '', onClose = () => { }, wide = false, className = '', showHeader = true }) {
+  return <div className={`modal-backdrop open${className ? ` ${className}-backdrop` : ''}`} role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className={`modal ${wide ? 'modal-checkout' : ''} ${className}`} role="dialog" aria-modal="true"><button className="modal-close" onClick={onClose} aria-label="Close"><X size={22} /></button>{showHeader && <><div className="eyebrow left">{eyebrow} <span className="eyebrow-line" /></div><h2>{title}</h2></>}{children}</div></div>;
 }
