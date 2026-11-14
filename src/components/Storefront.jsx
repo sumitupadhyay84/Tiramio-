@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowUpRight, CirclePlay, Coffee, Heart, Info, Instagram, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
 
 const productVisual = '/images/cocoa-dusted-tiramisu.png';
 const productImages = {
@@ -22,6 +22,7 @@ const products = [
 ];
 const api = process.env.NEXT_PUBLIC_API_URL || '';
 const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918433198122';
+const merchantUpi = process.env.NEXT_PUBLIC_MERCHANT_UPI_ID || '8433198122@ptsbi';
 const money = n => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
 function Reveal({ children, className = '', delay = 0 }) {
@@ -106,7 +107,12 @@ export default function Storefront() {
   const [mobileNav, setMobileNav] = useState(false);
   const [tracking, setTracking] = useState(null);
   const [trackingError, setTrackingError] = useState('');
-  const [form, setForm] = useState({ name: '', phone: '', fulfilment: 'Pickup', address: '', notes: '', payment: 'Pay on pickup / delivery' });
+  const [checkoutStep, setCheckoutStep] = useState('details');
+  const [currentOrderRef, setCurrentOrderRef] = useState('');
+  const [paymentId, setPaymentId] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
+  const [form, setForm] = useState({ name: '', phone: '', fulfilment: 'Pickup', address: '', notes: '' });
   const [trackingForm, setTrackingForm] = useState({ orderId: '', phone: '' });
   const headerRef = useRef(null);
   const heroRef = useRef(null);
@@ -114,7 +120,14 @@ export default function Storefront() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const lenis = new Lenis({ duration: 1.15, smoothWheel: true, lerp: 0.08 });
+    const lenis = new Lenis({
+      duration: 0.7,
+      smoothWheel: true,
+      lerp: 0.12,
+      wheelMultiplier: 1.1,
+      touchMultiplier: 1.3
+    });
+    window.__lenis = lenis;
     let frameId = null;
     const raf = time => {
       lenis.raf(time);
@@ -183,67 +196,264 @@ export default function Storefront() {
     if (delta > 0) message(`${catalogue.find(p => p.id === id)?.name || 'Dessert'} added to your box.`);
   };
   const open = id => setModal(id);
-  const close = () => setModal('');
+  const close = () => {
+    setModal('');
+    if (checkoutStep === 'confirmed') {
+      setCheckoutStep('details');
+      setPaymentId('');
+    }
+  };
   const openChat = text => { window.location.assign(`https://wa.me/${whatsapp}?text=${encodeURIComponent(text)}`); };
-  const showCheckout = () => { if (!count) return message('Choose at least one TiraMio box first.'); open('checkout'); };
 
-  async function loadRazorpay() {
-    if (window.Razorpay) return true;
-    return new Promise(resolve => {
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true); script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  }
+  const routeToSelector = {
+    '/': '#top',
+    '/menu': '#menu',
+    '/story': '#story',
+    '/track': '#track',
+    '/order-smile': '#scan',
+    '/scan': '#scan',
+  };
 
-  async function submitOrder(event) {
-    event.preventDefault();
+  const selectorToRoute = {
+    '#top': '/',
+    '#menu': '/menu',
+    '#story': '/story',
+    '#track': '/track',
+    '#scan': '/order-smile',
+    '#order-smile': '/order-smile',
+  };
+
+  const getTargetElement = (selector) => {
+    const el = document.querySelector(selector);
+    if (!el) return null;
+
+    if (selector === '#menu') {
+      // Pinpoint the menu content/heading to completely clear the hero section and wave divider
+      return el.querySelector('.menu-content') || el.querySelector('.section-heading') || el;
+    }
+    if (selector === '#story') {
+      // Pinpoint story inner content to completely clear top divider flourishes
+      return el.querySelector('.story-inner') || el;
+    }
+    if (selector === '#track') {
+      // Pinpoint tracking card container
+      return document.querySelector('#track') || el.querySelector('.experience-tracking') || el;
+    }
+    if (selector === '#scan') {
+      // Pinpoint scan & order card
+      return el.querySelector('.scan-card') || el.querySelector('.section-wrap') || el;
+    }
+    return el;
+  };
+
+  const scrollToRoute = (route, immediate = false) => {
+    if (typeof window === 'undefined') return;
+
+    if (route === '/' || route === '#top') {
+      if (window.__lenis && !immediate) {
+        window.__lenis.scrollTo(0, { duration: 0.55 });
+      } else {
+        window.scrollTo({ top: 0, behavior: immediate ? 'auto' : 'smooth' });
+      }
+      return;
+    }
+
+    const selector = routeToSelector[route] || (route.startsWith('#') ? route : `#${route}`);
+    const targetEl = getTargetElement(selector);
+    if (!targetEl) return;
+
+    const header = headerRef.current || document.querySelector('.site-header');
+    const isMobile = window.innerWidth <= 760;
+    const headerH = header ? header.offsetHeight : (isMobile ? 68 : 78);
+    // 20px clean clearance below header (14px on mobile)
+    const breathingRoom = selector === '#track' ? (isMobile ? 16 : 24) : (isMobile ? 14 : 20);
+    const dynamicOffset = -(headerH + breathingRoom);
+
+    if (window.__lenis && !immediate) {
+      window.__lenis.scrollTo(targetEl, {
+        offset: dynamicOffset,
+        duration: 0.55,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+      });
+    } else {
+      const top = targetEl.getBoundingClientRect().top + window.scrollY + dynamicOffset;
+      window.scrollTo({ top, behavior: immediate ? 'auto' : 'smooth' });
+    }
+  };
+
+  const navigateToRoute = (e, route) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setMobileNav(false);
+
+    const cleanRoute = route.startsWith('/') ? route : (selectorToRoute[route] || '/');
+
+    if (typeof window !== 'undefined' && window.history && window.history.pushState) {
+      if (window.location.pathname !== cleanRoute || window.location.hash) {
+        window.history.pushState(null, '', cleanRoute);
+      }
+    }
+
+    scrollToRoute(cleanRoute);
+  };
+
+  const scrollToSection = (e, target) => navigateToRoute(e, selectorToRoute[target] || target);
+
+  // Sync scroll position on initial load and when navigating via browser back / forward
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (window.location.hash) {
+      const mapped = selectorToRoute[window.location.hash];
+      if (mapped) {
+        window.history.replaceState(null, '', mapped);
+        const timer = setTimeout(() => scrollToRoute(mapped, false), 140);
+        return () => clearTimeout(timer);
+      }
+    }
+
+    const path = window.location.pathname;
+    if (path && path !== '/' && routeToSelector[path]) {
+      const timer = setTimeout(() => {
+        scrollToRoute(path, false);
+      }, 140);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      scrollToRoute(path || '/', false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const getNextOrderRef = async () => {
+    if (api) {
+      try {
+        const response = await fetch(`${api}/api/orders/next-ref`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.orderRef) return data.orderRef;
+        }
+      } catch {
+        // Fallback to client sequence
+      }
+    }
+    try {
+      const stored = parseInt(localStorage.getItem('tiramio_order_seq') || '1000', 10);
+      const next = stored + 1;
+      localStorage.setItem('tiramio_order_seq', String(next));
+      return `TIRA-${String(next).padStart(4, '0')}`;
+    } catch {
+      return `TIRA-${Math.floor(1001 + Math.random() * 8999)}`;
+    }
+  };
+
+  const showCheckout = () => {
+    if (!count) return message('Choose at least one TiraMio box first.');
+    setCheckoutStep('details');
+    setPaymentId('');
+    setPaymentError('');
+    setCopiedUpi(false);
+    open('checkout');
+  };
+
+  const handleProceedToPayment = async (e) => {
+    e.preventDefault();
     if (!count || busy) return;
+    if (!form.name.trim()) return message('Please enter your name.');
     if (!/^[6-9]\d{9}$/.test(form.phone)) return message('Please enter a valid 10-digit Indian mobile number.');
     if (form.fulfilment === 'Delivery' && !form.address.trim()) return message('Please add your delivery address.');
-    if (form.payment === 'Online payment' && !api) return message('Online payment is not active in this preview. Configure the Express API and Razorpay keys to enable it.');
+
     setBusy(true);
+    try {
+      const ref = await getNextOrderRef();
+      setCurrentOrderRef(ref);
+      setCheckoutStep('payment');
+    } catch {
+      message('Unable to initialize order. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyUpiId = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(merchantUpi);
+    }
+    setCopiedUpi(true);
+    message('UPI ID copied to clipboard!');
+    setTimeout(() => setCopiedUpi(false), 2500);
+  };
+
+  const handleVerifyAndSendOrder = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const cleanPaymentId = paymentId.trim();
+    if (!cleanPaymentId) {
+      setPaymentError('Please enter your 12-digit UPI / UTR Transaction ID from the receipt.');
+      return;
+    }
+    if (cleanPaymentId.length < 6) {
+      setPaymentError('Please enter a valid UPI / UTR Transaction ID (at least 6 characters).');
+      return;
+    }
+    setPaymentError('');
+    setBusy(true);
+
     const payload = {
-      customerName: form.name.trim(), phone: form.phone, fulfilment: form.fulfilment,
+      orderRef: currentOrderRef,
+      customerName: form.name.trim(),
+      phone: form.phone,
+      fulfilment: form.fulfilment,
       address: form.fulfilment === 'Delivery' ? form.address.trim() : null,
       notes: form.notes.trim() || null,
+      payment: 'UPI payment',
+      paymentId: cleanPaymentId,
       items: chosen.map(item => ({ productId: item.id, quantity: qty[item.id] }))
     };
+
     try {
-      let orderRef = `TIRA-${Math.floor(1000 + Math.random() * 9000)}`;
       if (api) {
-        const response = await fetch(`${api}/api/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const response = await fetch(`${api}/api/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Could not create the order. Please try again.');
-        orderRef = data.orderRef;
-        if (form.payment.startsWith('Online')) {
-          const loaded = await loadRazorpay();
-          if (!loaded) throw new Error('Online checkout could not load. Please choose WhatsApp order instead.');
-          const payResponse = await fetch(`${api}/api/payments/create-order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderRef, phone: form.phone }) });
-          const payData = await payResponse.json();
-          if (!payResponse.ok) throw new Error(payData.message || 'Online payment is not configured yet.');
-          const checkout = new window.Razorpay({
-            key: payData.keyId, amount: payData.amount, currency: payData.currency || 'INR', name: 'TiraMio Tiramisu',
-            description: `Order ${orderRef}`, order_id: payData.gatewayOrderId,
-            prefill: { name: form.name, contact: form.phone }, theme: { color: '#3b1e14' },
-            handler: async result => {
-              const verify = await fetch(`${api}/api/payments/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderRef, phone: form.phone, ...result }) });
-              const verified = await verify.json();
-              if (verify.ok && verified.verified) { setQty(Object.fromEntries(catalogue.map(item => [item.id, 0]))); message(`Payment received for ${orderRef}.`); }
-              else message('Payment verification is pending. Contact TiraMio with your order reference.');
-            }
-          });
-          checkout.open(); setBusy(false); close(); return;
-        }
+        if (!response.ok) throw new Error(data.message || 'Could not register order with server.');
       }
+
       const lines = chosen.map(item => `• ${item.name} (${item.weight}) × ${qty[item.id]} = ${money(item.price * qty[item.id])}`).join('\n');
-      const text = `Hi TiraMio! I'd like to place an order.\n\nOrder reference: ${orderRef}\n${lines}\n\nSubtotal: ${money(total)}\nName: ${form.name}\nMobile: ${form.phone}\nFulfilment: ${form.fulfilment}${form.address ? `\nAddress: ${form.address}` : ''}\nPayment: ${form.payment}${form.notes ? `\nNotes: ${form.notes}` : ''}\n\nPlease confirm availability and the final total. Thank you!`;
-      openChat(text); setQty(Object.fromEntries(catalogue.map(item => [item.id, 0]))); close(); message(`Order request ${orderRef} is ready in WhatsApp.`);
+      const text = `Hi TiraMio! I have completed the UPI payment for my order.\n\n` +
+        `✅ *PAYMENT CONFIRMED VIA UPI*\n` +
+        `💳 *Payment ID / UTR:* ${cleanPaymentId}\n` +
+        `🧾 *Order ID:* ${currentOrderRef}\n` +
+        `💰 *Amount Paid:* ${money(total)}\n\n` +
+        `👤 *Customer Details:*\n` +
+        `• Name: ${form.name.trim()}\n` +
+        `• Mobile: ${form.phone}\n` +
+        `• Fulfilment: ${form.fulfilment}` +
+        (form.fulfilment === 'Delivery' && form.address ? `\n• Address: ${form.address.trim()}` : '') +
+        (form.notes ? `\n• Notes: ${form.notes.trim()}` : '') +
+        `\n\n📦 *Items:*\n${lines}\n\n` +
+        `Please confirm receipt and dispatch schedule. Thank you!`;
+
+      openChat(text);
+      setQty(Object.fromEntries(catalogue.map(item => [item.id, 0])));
+      setCheckoutStep('confirmed');
+      message(`Payment verified! Order ${currentOrderRef} confirmed on WhatsApp.`);
     } catch (error) {
-      message(error.message || 'Something went wrong. Please try WhatsApp ordering.');
-    } finally { setBusy(false); }
-  }
+      message(error.message || 'Could not submit order. Please retry.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   async function trackOrder(event) {
     event.preventDefault(); setTracking(null); setTrackingError('');
@@ -267,11 +477,23 @@ export default function Storefront() {
       <div className="scroll-progress"><span className="progress-bar" /></div>
       <div className="announcement"><span className="sparkle">✦</span> A little box of happiness, made with care <span className="sparkle">✦</span></div>
       <header ref={headerRef} className="site-header" id="top">
-        <a className="brand" href="#top" aria-label="TiraMio home"><span className="brand-mark"><span className="cake-stack"><i /><i /><i /></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
-        <nav className="desktop-nav"><a href="#menu">Our Menu</a><a href="#story">Our Story</a><a href="#moments">The TiraMio Feeling</a><a href="#track">Track Order</a></nav>
+        <a className="brand" href="/" onClick={e => navigateToRoute(e, '/')} aria-label="TiraMio home"><span className="brand-mark"><span className="cake-stack"><i /><i /><i /></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
+        <nav className="desktop-nav">
+          <a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a>
+          <a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a>
+          <a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a>
+          <a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a>
+        </nav>
         <div className="header-actions"><button className="cart-trigger" onClick={() => open('cart')}><ShoppingBag size={16} /><span>Your Box</span><b>{count}</b></button><button className="menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation">{mobileNav ? <X /> : <Menu />}</button></div>
       </header>
-      {mobileNav && <nav className="mobile-nav open"><a onClick={() => setMobileNav(false)} href="#menu">Our Menu</a><a onClick={() => setMobileNav(false)} href="#story">Our Story</a><a onClick={() => setMobileNav(false)} href="#moments">The TiraMio Feeling</a><a onClick={() => { setMobileNav(false); open('track'); }} href="#track">Track Order</a></nav>}
+      {mobileNav && (
+        <nav className="mobile-nav open">
+          <a onClick={e => navigateToRoute(e, '/menu')} href="/menu">Our Menu</a>
+          <a onClick={e => navigateToRoute(e, '/story')} href="/story">Our Story</a>
+          <a onClick={e => navigateToRoute(e, '/track')} href="/track">Track Order</a>
+          <a onClick={e => navigateToRoute(e, '/order-smile')} href="/order-smile">Order Smile</a>
+        </nav>
+      )}
       <main>
         <section ref={heroRef} className="hero section-wrap" aria-label="Welcome to TiraMio">
           <div className="hero-ambient" aria-hidden="true">
@@ -296,7 +518,7 @@ export default function Storefront() {
               <p className="hero-tagline reveal-block">Layers of Love, in Every Bite.</p>
               <p className="hero-desc reveal-block">Meet your new little indulgence: soft coffee-kissed layers, dreamy cream and a generous snowfall of cocoa.</p>
               <div className="hero-actions reveal-block">
-                <a className="button button-dark" href="#menu">Explore Our Desserts <ArrowUpRight size={16} /></a>
+                <a className="button button-dark" href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Explore Our Desserts <ArrowUpRight size={16} /></a>
                 <button className="button button-light" onClick={() => open('qr')}><CirclePlay size={18} /> Discover Our Story</button>
               </div>
               <div className="hero-proof reveal-block"><span className="proof-stars">★★★★★</span><span>4.9 (2,300+ happy dessert lovers)</span></div>
@@ -474,7 +696,7 @@ export default function Storefront() {
               </div>
 
               <div className="story-action-row">
-                <a className="story-cta-btn" href="#menu">
+                <a className="story-cta-btn" href="/menu" onClick={e => navigateToRoute(e, '/menu')}>
                   Find your favourite <ArrowUpRight size={15} />
                 </a>
                 <span className="story-signoff-copy">
@@ -487,16 +709,16 @@ export default function Storefront() {
         <WaveDivider variant="to-light" bg="#241108" fill="var(--paper)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
         <ExperienceSection onTrackOrder={() => open('track')} />
         <CurveDivider />
-        <section className="scan-section"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with TiraMio. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order TiraMio on WhatsApp" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
+        <section className="scan-section" id="scan"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with TiraMio. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order TiraMio on WhatsApp" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
         <WaveDivider variant="to-dark" bg="var(--paper)" fill="var(--espresso)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
-        <section className="closing-section"><div className="closing-inner section-wrap"><div className="closing-emblem" aria-hidden="true"><span /><span className="closing-cake"><i /><i /><i /></span><span /></div><p>One last spoon?</p><h2>Make room for <em>sweet things.</em></h2><a className="button button-cream" href="#menu">Order your TiraMio <ArrowUpRight size={16} /></a></div></section>
+        <section className="closing-section"><div className="closing-inner section-wrap"><div className="closing-emblem" aria-hidden="true"><span /><span className="closing-cake"><i /><i /><i /></span><span /></div><p>One last spoon?</p><h2>Make room for <em>sweet things.</em></h2><a className="button button-cream" href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Order your TiraMio <ArrowUpRight size={16} /></a></div></section>
       </main>
       <CurveDivider />
       <footer className="site-footer">
         <div className="footer-divider section-wrap" aria-hidden="true"><span>✦</span></div>
         <div className="footer-main section-wrap">
           <div className="footer-brand">
-            <a className="brand brand-footer" href="#top"><span className="brand-mark"><span className="cake-stack"><i /><i /><i /></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
+            <a className="brand brand-footer" href="/" onClick={e => navigateToRoute(e, '/')}><span className="brand-mark"><span className="cake-stack"><i /><i /><i /></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
             <p>Layers of Love, in Every Bite.</p>
             <div className="footer-socials" aria-label="Social media">
               <a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
@@ -505,19 +727,242 @@ export default function Storefront() {
             </div>
           </div>
           <div className="footer-links">
-            <div><b>EXPLORE</b><a href="#menu">Our Menu</a><a href="#story">Our Story</a><a href="#track">Track Order</a></div>
+            <div><b>EXPLORE</b><a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a><a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a><a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a><a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a></div>
             <div><b>SAY HELLO</b><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp Us</a><button onClick={() => open('qr')}><QrCode size={20} />Scan &amp; Order</button><a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer"><Instagram size={20} />Instagram: @TiraMioTiramisu*</a></div>
             <div><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span><span><Info size={20} />*Handle availability to be checked</span></div>
           </div>
         </div>
-        <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} TiraMio Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20} /></b></span><a href="#top">Back to top <ArrowUpRight size={17} /></a></div>
+        <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} TiraMio Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20} /></b></span><a href="/" onClick={e => navigateToRoute(e, '/')}>Back to top <ArrowUpRight size={17} /></a></div>
       </footer>
 
       <div className="floating-order"><button className="floating-whatsapp" onClick={() => open('qr')}><QrCode size={15} /> Scan & order</button><button className="floating-cart" onClick={() => open('cart')}>Box <b>{count}</b><strong>{money(total)}</strong></button></div>
 
       {modal === 'cart' && <Modal onClose={close} className="cart-modal" showHeader={false}><div className="cart-modal-art"><img src={productVisual} alt="Cocoa-dusted tiramisu in a glass dessert cup" /></div><div className="cart-modal-copy"><div className="eyebrow left">YOUR LITTLE BOX <span className="eyebrow-line" /></div><h2>A Good Choice.</h2>{chosen.length ? <div className="cart-lines">{chosen.map(item => <div className="cart-line" key={item.id}><div><strong>{item.name}</strong><small>{item.weight} · {money(item.price)} each</small></div><div className="cart-line-actions"><button onClick={() => updateQty(item.id, -1)} aria-label={`Remove one ${item.name}`}><Minus size={11} /></button><b>{qty[item.id]}</b><button onClick={() => updateQty(item.id, 1)} aria-label={`Add one ${item.name}`}><Plus size={11} /></button></div><strong>{money(item.price * qty[item.id])}</strong></div>)}</div> : <p className="empty-cart">Your box is waiting for something delicious.</p>}<div className="cart-footer"><div className="cart-summary"><span><ShoppingBag size={15} />Subtotal</span><strong>{money(total)}</strong></div><button className="button button-dark button-full" onClick={showCheckout}><ShoppingBag size={16} />Continue to Details <ArrowUpRight size={17} /></button></div></div></Modal>}
 
-      {modal === 'checkout' && <Modal title={<>Let’s get you <em>your TiraMio.</em></>} eyebrow="JUST A FEW DETAILS" onClose={close} wide><form onSubmit={submitOrder}><div className="form-grid"><label>Your name<input required maxLength={80} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="How should we call you?" /></label><label>Mobile number<input required inputMode="numeric" maxLength={10} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10-digit mobile number" /></label><label className="full-span">How would you like it?<select value={form.fulfilment} onChange={e => setForm({ ...form, fulfilment: e.target.value })}><option>Pickup</option><option>Delivery</option></select></label>{form.fulfilment === 'Delivery' && <label className="full-span">Delivery address<textarea required rows={2} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="House / street / area / landmark" /></label>}<label className="full-span">Anything we should know?<textarea rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Preferred timing, special instructions…" /></label><label className="full-span">Payment preference<select value={form.payment} onChange={e => setForm({ ...form, payment: e.target.value })}><option>Pay on pickup / delivery</option><option>Online payment</option></select></label></div><div className="checkout-summary"><span>Your box · {count} item{count === 1 ? '' : 's'}</span><strong>{money(total)}</strong></div><p className="form-disclaimer">WhatsApp ordering is available now. Online payment requires your Razorpay merchant account and configured server keys.</p><button className="button button-dark button-full" type="submit" disabled={busy}>{busy ? 'Preparing your order…' : form.payment === 'Online payment' ? 'Continue to secure payment' : 'Send order on WhatsApp'} <ArrowUpRight size={16} /></button></form></Modal>}
+      {modal === 'checkout' && (
+        <Modal
+          title={
+            checkoutStep === 'confirmed' ? (
+              <>Order <em>Confirmed!</em></>
+            ) : checkoutStep === 'payment' ? (
+              <>Pay via <em>UPI.</em></>
+            ) : (
+              <>Let’s get you <em>your TiraMio.</em></>
+            )
+          }
+          eyebrow={
+            checkoutStep === 'confirmed'
+              ? 'ORDER PLACED'
+              : checkoutStep === 'payment'
+                ? `STEP 2 OF 2 · ORDER ${currentOrderRef}`
+                : 'STEP 1 OF 2 · YOUR DETAILS'
+          }
+          onClose={close}
+          wide
+        >
+          {checkoutStep === 'details' && (
+            <form onSubmit={handleProceedToPayment}>
+              <div className="form-grid">
+                <label>
+                  Your name
+                  <input
+                    required
+                    maxLength={80}
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    placeholder="How should we call you?"
+                  />
+                </label>
+                <label>
+                  Mobile number (WhatsApp)
+                  <input
+                    required
+                    inputMode="numeric"
+                    maxLength={10}
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    placeholder="10-digit mobile number"
+                  />
+                </label>
+                <div className="full-span">
+                  <span className="field-title">How would you like it?</span>
+                  <div className="fulfilment-pills">
+                    <button
+                      type="button"
+                      className={`pill-btn ${form.fulfilment === 'Pickup' ? 'active' : ''}`}
+                      onClick={() => setForm({ ...form, fulfilment: 'Pickup' })}
+                    >
+                      <Package size={15} /> Pickup
+                    </button>
+                    <button
+                      type="button"
+                      className={`pill-btn ${form.fulfilment === 'Delivery' ? 'active' : ''}`}
+                      onClick={() => setForm({ ...form, fulfilment: 'Delivery' })}
+                    >
+                      <Truck size={15} /> Delivery
+                    </button>
+                  </div>
+                </div>
+                {form.fulfilment === 'Delivery' && (
+                  <label className="full-span">
+                    Delivery address
+                    <textarea
+                      required
+                      rows={2}
+                      value={form.address}
+                      onChange={e => setForm({ ...form, address: e.target.value })}
+                      placeholder="House / flat no., street, area, landmark, city"
+                    />
+                  </label>
+                )}
+                <label className="full-span">
+                  Anything we should know? <small className="opt-label">(Optional)</small>
+                  <textarea
+                    rows={2}
+                    value={form.notes}
+                    onChange={e => setForm({ ...form, notes: e.target.value })}
+                    placeholder="Preferred timing, delivery instructions…"
+                  />
+                </label>
+              </div>
+
+              <div className="checkout-summary">
+                <div className="checkout-summary-copy">
+                  <span>Your box · {count} item{count === 1 ? '' : 's'}</span>
+                  <small className="upi-ready-tag">🔒 Payment via Instant UPI (GPay / PhonePe / Paytm / QR)</small>
+                </div>
+                <strong>{money(total)}</strong>
+              </div>
+
+              <button className="button button-dark button-full" type="submit" disabled={busy}>
+                {busy ? 'Preparing order…' : `Proceed to Pay ${money(total)} via UPI`} <ArrowUpRight size={16} />
+              </button>
+            </form>
+          )}
+
+          {checkoutStep === 'payment' && (
+            <div className="upi-payment-view">
+              <div className="upi-order-meta">
+                <span className="meta-badge order-badge">Order: <b>{currentOrderRef}</b></span>
+                <span className="meta-badge amount-badge">Payable: <b>{money(total)}</b></span>
+              </div>
+
+              <div className="upi-payment-card">
+                <div className="upi-vpa-row">
+                  <div>
+                    <span className="upi-vpa-label">OFFICIAL STORE UPI ID</span>
+                    <strong className="upi-vpa-value">{merchantUpi}</strong>
+                  </div>
+                  <button type="button" className="copy-btn" onClick={copyUpiId}>
+                    {copiedUpi ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
+                  </button>
+                </div>
+
+                <div className="upi-qr-box">
+                  <div className="qr-image-wrapper">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                        `upi://pay?pa=${merchantUpi}&pn=TiraMio%20Tiramisu&am=${total}&cu=INR&tn=Order%20${currentOrderRef}`
+                      )}`}
+                      alt="UPI QR Code"
+                      width={180}
+                      height={180}
+                    />
+                  </div>
+                  <p className="qr-guide-text">Scan with Google Pay, PhonePe, Paytm, or any UPI app</p>
+                </div>
+
+                <div className="upi-intent-action">
+                  <a
+                    className="button button-light button-full upi-app-launch"
+                    href={`upi://pay?pa=${merchantUpi}&pn=TiraMio%20Tiramisu&am=${total}&cu=INR&tn=Order%20${currentOrderRef}`}
+                  >
+                    📱 Open UPI App on Mobile to Pay {money(total)}
+                  </a>
+                </div>
+              </div>
+
+              <form onSubmit={handleVerifyAndSendOrder} className="utr-confirmation-form">
+                <div className="utr-field">
+                  <label htmlFor="utr-input-field">
+                    <strong>Enter 12-digit UPI / UTR Transaction ID *</strong>
+                    <span>Complete payment above, then copy the 12-digit UTR/Ref ID from your UPI app receipt</span>
+                  </label>
+                  <input
+                    id="utr-input-field"
+                    required
+                    value={paymentId}
+                    onChange={e => {
+                      setPaymentId(e.target.value.trim());
+                      if (paymentError) setPaymentError('');
+                    }}
+                    placeholder="e.g. 431289567123"
+                    className={paymentError ? 'input-error' : ''}
+                  />
+                  {paymentError && <span className="field-error-text">{paymentError}</span>}
+                </div>
+
+                <p className="order-whatsapp-notice">
+                  ⚠️ Your order and official receipt will be sent to WhatsApp only after you enter the Payment ID above.
+                </p>
+
+                <div className="modal-dual-actions">
+                  <button
+                    type="button"
+                    className="button button-light btn-back-step"
+                    onClick={() => setCheckoutStep('details')}
+                    disabled={busy}
+                  >
+                    <ArrowLeft size={16} /> Edit Details
+                  </button>
+                  <button
+                    type="submit"
+                    className="button button-dark btn-confirm-pay"
+                    disabled={busy || !paymentId.trim()}
+                  >
+                    {busy ? 'Registering Order…' : 'Verify & Send to WhatsApp'} <ArrowUpRight size={16} />
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {checkoutStep === 'confirmed' && (
+            <div className="confirmed-view">
+              <div className="confirmed-celebration">
+                <div className="check-ring">
+                  <CheckCircle2 size={44} />
+                </div>
+                <h3>Payment & Order Received!</h3>
+                <p>
+                  Order <strong>{currentOrderRef}</strong> with Payment ID <code>{paymentId}</code> is confirmed and sent to WhatsApp.
+                </p>
+              </div>
+
+              <div className="confirmed-summary-card">
+                <div className="summary-item"><span>Order ID</span><strong>{currentOrderRef}</strong></div>
+                <div className="summary-item"><span>Payment UTR</span><strong>{paymentId}</strong></div>
+                <div className="summary-item"><span>Customer</span><strong>{form.name} ({form.phone})</strong></div>
+                <div className="summary-item"><span>Fulfilment</span><strong>{form.fulfilment}</strong></div>
+                <div className="summary-item"><span>Total Paid</span><strong>{money(total)}</strong></div>
+              </div>
+
+              <div className="confirmed-footer-actions">
+                <button
+                  type="button"
+                  className="button button-dark button-full"
+                  onClick={() => {
+                    close();
+                    setCheckoutStep('details');
+                  }}
+                >
+                  Done, Enjoy Your TiraMio!
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
 
       {modal === 'track' && <Modal title={<>Track your <em>box.</em></>} eyebrow="ORDER UPDATES" onClose={close}><form className="track-form" onSubmit={trackOrder}><label>Order reference<input required value={trackingForm.orderId} onChange={e => setTrackingForm({ ...trackingForm, orderId: e.target.value })} placeholder="e.g. TIRA-2048" /></label><label>Mobile number<input required inputMode="numeric" maxLength={10} value={trackingForm.phone} onChange={e => setTrackingForm({ ...trackingForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="Phone used for order" /></label><button className="button button-dark button-full" type="submit">Find my order <ArrowUpRight size={16} /></button></form>{trackingError && <div className="track-result"><p>{trackingError}</p></div>}{tracking && <div className="track-result"><h3>{tracking.orderRef} · {String(tracking.status).replaceAll('_', ' ')}</h3><p>{tracking.customerName} · {tracking.fulfilment} · {money(tracking.total)}</p>{stageLabels.map((label, i) => <div className="status-line" key={label}><span className={`status-dot ${i <= currentStage ? 'complete' : ''}`} /><div className="status-copy"><b>{label}</b><small>{stageDescriptions[i]}</small></div></div>)}{tracking.events?.length > 0 && <div className="tracking-events"><b>Latest updates</b>{tracking.events.map((event, i) => <p key={i}>{String(event.status).replaceAll('_', ' ')} · {new Date(event.created_at).toLocaleString()}</p>)}</div>}</div>}<p className="form-disclaimer">Live order status appears after the Express API and PostgreSQL database are connected.</p></Modal>}
 
@@ -684,5 +1129,53 @@ function ScallopedBadge() {
 }
 
 function Modal({ children, title = '', eyebrow = '', onClose = () => { }, wide = false, className = '', showHeader = true }) {
-  return <div className={`modal-backdrop open${className ? ` ${className}-backdrop` : ''}`} role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className={`modal ${wide ? 'modal-checkout' : ''} ${className}`} role="dialog" aria-modal="true"><button className="modal-close" onClick={onClose} aria-label="Close"><X size={22} /></button>{showHeader && <><div className="eyebrow left">{eyebrow} <span className="eyebrow-line" /></div><h2>{title}</h2></>}{children}</div></div>;
+  useEffect(() => {
+    document.documentElement.classList.add('has-modal');
+    document.body.classList.add('has-modal');
+    const lenisInstance = window.__lenis;
+    if (lenisInstance) lenisInstance.stop();
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.documentElement.classList.remove('has-modal');
+      document.body.classList.remove('has-modal');
+      if (lenisInstance) lenisInstance.start();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className={`modal-backdrop open${className ? ` ${className}-backdrop` : ''}`}
+      role="presentation"
+      data-lenis-prevent="true"
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+      onWheel={e => e.stopPropagation()}
+      onTouchMove={e => e.stopPropagation()}
+    >
+      <div
+        className={`modal ${wide ? 'modal-checkout' : ''} ${className}`}
+        role="dialog"
+        aria-modal="true"
+        data-lenis-prevent="true"
+        onClick={e => e.stopPropagation()}
+        onWheel={e => e.stopPropagation()}
+      >
+        <button className="modal-close" onClick={onClose} aria-label="Close">
+          <X size={22} />
+        </button>
+        {showHeader && (
+          <>
+            <div className="eyebrow left">{eyebrow} <span className="eyebrow-line" /></div>
+            <h2>{title}</h2>
+          </>
+        )}
+        {children}
+      </div>
+    </div>
+  );
 }
