@@ -182,3 +182,7 @@
   .product-card,.product-photo img,.button,.add-button{transition:none!important}
   .ticker-track{animation:none}
 }
+
+
+html { scroll-behavior: smooth; scroll-padding-top: 85px; }
+#menu, #story, #track, #scan { scroll-margin-top: 85px; }

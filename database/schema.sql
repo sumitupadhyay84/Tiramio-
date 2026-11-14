@@ -1,5 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- Sequential order counter for TIRA-0001, TIRA-0002, etc.
+CREATE SEQUENCE IF NOT EXISTS order_seq START WITH 1 INCREMENT BY 1 NO CYCLE;
+
 CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
@@ -34,6 +37,9 @@ CREATE TABLE IF NOT EXISTS orders (
   fulfilment TEXT NOT NULL CHECK (fulfilment IN ('Pickup','Delivery')),
   delivery_address TEXT,
   notes TEXT,
+  payment_method TEXT NOT NULL DEFAULT 'Pay on pickup / delivery',
+  upi_id TEXT,
+  payment_id TEXT,
   status order_status NOT NULL DEFAULT 'placed',
   payment_status payment_status NOT NULL DEFAULT 'unpaid',
   total_paise INTEGER NOT NULL CHECK (total_paise >= 0),
@@ -82,11 +88,16 @@ CREATE INDEX IF NOT EXISTS idx_orders_status_created ON orders(status, created_a
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id);
 
+-- Migration helpers for existing databases
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'Pay on pickup / delivery';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS upi_id TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_id TEXT;
+
 INSERT INTO products (slug, name, weight_grams, price_paise, short_description, badge, image_url, sort_order)
 VALUES
-  ('mini', 'TiraMio Mini', 100, 6900, 'Your personal pause. Just enough to make the day sweeter.', 'A LITTLE TREAT', '/images/tiramio-box-mini.webp', 1),
-  ('classic', 'TiraMio Classic', 200, 12900, 'The just-right box for your favourite dessert moment.', 'THE CROWD FAVOURITE', '/images/tiramio-box-classic.webp', 2),
-  ('share', 'TiraMio Share Box', 300, 18900, 'More layers, more spoons, more reasons to gather.', 'MADE FOR SHARING', '/images/tiramio-box-share.webp', 3)
+  ('mini', 'TiraMio Mini', 100, 6900, 'Your personal pause. Just enough to make the day sweeter.', 'PERSONAL TREAT · SAVE ₹10', '/images/tiramio-box-mini.webp', 1),
+  ('classic', 'TiraMio Classic', 200, 12900, 'The just-right box for your favourite dessert moment.', 'MOST LOVED · SAVE ₹11', '/images/tiramio-box-classic.webp', 2),
+  ('share', 'TiraMio Share Box', 300, 18900, 'More layers, more spoons, more reasons to gather.', 'BEST VALUE · SAVE ₹21', '/images/tiramio-box-share.webp', 3)
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   weight_grams = EXCLUDED.weight_grams,
