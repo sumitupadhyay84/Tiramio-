@@ -873,12 +873,65 @@ export default function Storefront() {
                 </div>
 
                 <div className="upi-intent-action">
+                  {/* Primary: Generic UPI intent - opens app chooser on Android / passes to iOS UPI apps */}
                   <a
-                    className="button button-light button-full upi-app-launch"
-                    href={`upi://pay?pa=${merchantUpi}&pn=TiraMio%20Tiramisu&am=${total}&cu=INR&tn=Order%20${currentOrderRef}`}
+                    className="button button-dark button-full upi-app-launch upi-primary-btn"
+                    href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}&tr=${encodeURIComponent(currentOrderRef)}`}
+                    onClick={e => {
+                      // On desktop/unsupported: fallback to copying UPI ID
+                      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                      if (!isMobile) {
+                        e.preventDefault();
+                        copyUpiId();
+                        message('UPI ID copied! Open your UPI app and pay manually.');
+                      }
+                    }}
                   >
-                    📱 Open UPI App on Mobile to Pay {money(total)}
+                    📱 Open UPI App to Pay {money(total)}
                   </a>
+
+                  {/* Per-app deep links with official brand logos */}
+                  <div className="upi-apps-grid">
+
+                    {/* Google Pay */}
+                    <a className="upi-app-pill" href={`gpay://upi/pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with Google Pay">
+                      <img src="/images/upi/gpay.webp" alt="Google Pay" className="upi-app-logo-img" width={40} height={40} loading="eager" />
+                      <span>GPay</span>
+                    </a>
+
+                    {/* PhonePe */}
+                    <a className="upi-app-pill" href={`phonepe://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with PhonePe">
+                      <img src="/images/upi/phonepe.webp" alt="PhonePe" className="upi-app-logo-img" width={40} height={40} loading="eager" />
+                      <span>PhonePe</span>
+                    </a>
+
+                    {/* Paytm */}
+                    <a className="upi-app-pill" href={`paytmmp://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with Paytm">
+                      <img src="/images/upi/paytm.webp" alt="Paytm" className="upi-app-logo-img" width={40} height={40} loading="eager" />
+                      <span>Paytm</span>
+                    </a>
+
+                    {/* CRED */}
+                    <a className="upi-app-pill" href={`credpay://upi/pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with CRED">
+                      <img src="/images/upi/cred.webp" alt="CRED" className="upi-app-logo-img" width={40} height={40} loading="eager" />
+                      <span>CRED</span>
+                    </a>
+
+                    {/* Amazon Pay */}
+                    <a className="upi-app-pill" href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}&app=amazon`} title="Pay with Amazon Pay">
+                      <img src="/images/upi/amazonpay.webp" alt="Amazon Pay" className="upi-app-logo-img" width={40} height={40} loading="eager" />
+                      <span>Amazon</span>
+                    </a>
+
+                    {/* BHIM UPI */}
+                    <a className="upi-app-pill" href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with BHIM or any UPI bank app">
+                      <img src="/images/upi/bhim.webp" alt="BHIM UPI" className="upi-app-logo-img" width={40} height={40} loading="eager" />
+                      <span>BHIM / Other</span>
+                    </a>
+
+                  </div>
+
+                  <p className="upi-apps-hint">↑ Tap to open your preferred UPI app directly</p>
                 </div>
               </div>
 

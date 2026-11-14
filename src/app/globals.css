@@ -2099,8 +2099,8 @@ button {
 }
 
 .upi-app-launch {
-  font-size: 12px;
-  padding: 12px;
+  font-size: 13px;
+  padding: 14px;
   text-align: center;
   border-radius: 10px;
   background: rgba(240, 228, 214, 0.7);
@@ -2111,6 +2111,82 @@ button {
 
 .upi-app-launch:hover {
   background: rgba(214, 173, 112, 0.3);
+}
+
+.upi-primary-btn {
+  background: linear-gradient(135deg, rgb(242, 216, 164), rgb(213, 160, 90));
+  color: rgb(42, 21, 13);
+  border: none;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 50px;
+  border-radius: 12px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 14px rgba(180, 110, 40, 0.22);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.upi-primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(180, 110, 40, 0.3);
+  background: linear-gradient(135deg, rgb(251, 227, 186), rgb(223, 175, 108));
+  color: rgb(42, 21, 13);
+}
+
+/* Per-app UPI buttons grid */
+.upi-apps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.upi-app-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1.5px solid rgba(214, 173, 112, 0.5);
+  color: var(--espresso);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.upi-app-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  border-color: rgb(190, 140, 70);
+}
+
+/* Official WebP / SVG logo styling */
+.upi-app-logo-img,
+.upi-app-logo-svg {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: block;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease;
+}
+
+.upi-app-pill:hover .upi-app-logo-img {
+  transform: scale(1.05);
+}
+
+.upi-apps-hint {
+  font-size: 9.5px;
+  color: #9e7a56;
+  text-align: center;
+  margin: 4px 0 0;
+  font-weight: 600;
 }
 
 /* UTR Form */
