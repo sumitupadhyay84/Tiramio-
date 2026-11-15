@@ -133,7 +133,7 @@
   .product-card:last-child{grid-column:1/-1;width:min(68%,440px);justify-self:center}
 }
 @media(max-width:760px){
-  .hero.section-wrap{min-height:clamp(690px,calc(100svh - 96px),790px)}
+  .hero.section-wrap{background-position:4%;min-height:clamp(366px,51svh,503px)}
   .hero-background-video{object-position:center 49%;opacity:1}
   .hero-overlay{background:linear-gradient(180deg,rgba(22,11,7,.82) 0%,rgba(29,15,9,.75) 46%,rgba(25,12,8,.73) 100%)}
   .hero-inner{grid-template-columns:minmax(0,1fr);gap:12px;width:calc(100% - 38px);padding:38px 0 52px;align-content:center}
