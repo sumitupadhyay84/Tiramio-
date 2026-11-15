@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowLeft, ArrowUpRight, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, Search, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
 
 const productVisual = '/images/cocoa-dusted-tiramisu.png';
 const productImages = {
@@ -484,7 +484,7 @@ export default function Storefront() {
           <a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a>
           <a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a>
         </nav>
-        <div className="header-actions"><button className="cart-trigger" onClick={() => open('cart')}><ShoppingBag size={16} /><span>Your Box</span><b>{count}</b></button><button className="menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation">{mobileNav ? <X /> : <Menu />}</button></div>
+        <div className="header-actions"><button className="mobile-search" onClick={e => navigateToRoute(e, '/menu')} aria-label="Browse desserts"><Search size={20} /></button><button className="cart-trigger" onClick={() => open('cart')}><ShoppingBag size={16} /><span>Your Box</span><b>{count}</b></button><button className="menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation">{mobileNav ? <X /> : <Menu />}</button></div>
       </header>
       {mobileNav && (
         <nav className="mobile-nav open">
@@ -516,7 +516,7 @@ export default function Storefront() {
                 <span className="hero-word-line"><span className="hero-word hero-word-accent">spoonful.</span></span>
               </h1>
               <p className="hero-tagline reveal-block">Layers of Love, in Every Bite.</p>
-              <p className="hero-desc reveal-block">Meet your new little indulgence: soft coffee-kissed layers, dreamy cream and a generous snowfall of cocoa.</p>
+              <p className="hero-desc reveal-block"><span className="hero-desc-desktop">Meet your new little indulgence: soft coffee-kissed layers, dreamy cream and a generous snowfall of cocoa.</span><span className="hero-desc-mobile">Meet your new little indulgence — soft coffee-kissed layers, dreamy cream and a generous snowfall of cocoa.</span></p>
               <div className="hero-actions reveal-block">
                 <a className="button button-dark" href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Explore Our Desserts <ArrowUpRight size={16} /></a>
                 <button className="button button-light" onClick={() => open('qr')}><CirclePlay size={18} /> Discover Our Story</button>
@@ -534,12 +534,17 @@ export default function Storefront() {
           <div className="hero-scroll"><span>Scroll to explore</span><span className="scroll-arrow">⌄</span></div>
           <WaveDivider variant="hero" fill="var(--paper)" underFill="rgba(198, 163, 106, 0.16)" stroke="rgba(198, 163, 106, 0.55)" />
         </section>
+        <div className="mobile-benefits" aria-label="Premium ingredients, freshly handcrafted, made with love">
+          <div className="mobile-benefit"><Leaf aria-hidden="true" /><span>Premium<br />Ingredients</span></div>
+          <div className="mobile-benefit"><CakeSlice aria-hidden="true" /><span>Freshly<br />Handcrafted</span></div>
+          <div className="mobile-benefit"><Heart aria-hidden="true" /><span>Made<br />with Love</span></div>
+        </div>
         <section className="menu-section section-wrap" id="menu">
           <div className="menu-content">
             <Reveal className="section-heading">
               <div>
-                <div className="eyebrow left">THE MENU <span className="eyebrow-line" /></div>
-                <h2>Pick your <em>happy.</em></h2>
+                <div className="eyebrow left"><span className="desktop-menu-eyebrow">THE MENU</span><span className="mobile-menu-eyebrow">OUR TIRAMISU</span> <span className="eyebrow-line" /></div>
+                <h2><span className="desktop-menu-title">Pick your <em>happy.</em></span><span className="mobile-menu-title">Explore Our Desserts</span></h2>
                 <p>Three sizes. One very good decision. Made for a little treat or a lot of sharing.</p>
               </div>
             </Reveal>
@@ -551,7 +556,6 @@ export default function Storefront() {
                     {item.id === 'mini' ? <Sparkles size={15} fill="currentColor" /> : item.id === 'classic' ? <Heart size={16} fill="currentColor" /> : <Package size={15} />}
                     {item.tag}
                   </span>
-                  <span className="product-favorite" aria-hidden="true"><Heart size={25} /></span>
                 </div>
                 <div className="product-info">
                   <div className="product-meta"><span>0{index + 1} / {item.id.toUpperCase()}</span><span>{item.weight}</span></div>
