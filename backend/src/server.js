@@ -176,4 +176,8 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message: status === 500 ? 'Something went wrong. Please try again.' : err.message });
 });
 
-app.listen(port, () => console.log(`TiraMio API listening on port ${port}`));
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(port, () => console.log(`TiraMio API listening on port ${port}`));
+}
+
+module.exports = app;
