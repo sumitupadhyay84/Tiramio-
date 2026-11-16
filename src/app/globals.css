@@ -6290,15 +6290,15 @@ main {
    ========================================================================== */
 
 .section-wave-divider {
-  position: relative;
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-  line-height: 0;
   pointer-events: none;
   z-index: 5;
+  width: 100%;
+  max-width: 100%;
   margin-top: -1px;
   margin-bottom: -1px;
+  line-height: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .section-wave-divider svg {
@@ -6868,7 +6868,6 @@ main {
 }
 
 .mobile-benefits,
-.mobile-search,
 .mobile-menu-eyebrow,
 .mobile-menu-title {
   display: none;
@@ -6906,21 +6905,6 @@ main {
     position: absolute;
     top: 50%;
     right: 16px;
-    transform: translateY(-50%);
-  }
-
-  .site-header .mobile-search {
-    position: absolute;
-    top: 50%;
-    right: 90px;
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 38px;
-    padding: 0;
-    border: 0;
-    color: var(--espresso);
-    background: transparent;
     transform: translateY(-50%);
   }
 
@@ -7197,10 +7181,6 @@ main {
     --mobile-order-bar-height: 48px;
   }
 
-  .site-header .mobile-search {
-    right: 64px;
-  }
-
   .site-header .cart-trigger {
     right: 10px;
   }
@@ -7236,10 +7216,6 @@ main {
 }
 
 @media (min-width: 351px) and (max-width: 390px) {
-  .site-header .mobile-search {
-    right: 78px;
-  }
-
   .site-header .cart-trigger {
     right: 10px;
   }
