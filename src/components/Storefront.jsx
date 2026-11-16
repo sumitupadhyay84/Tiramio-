@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, Search, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
 
 const productVisual = '/images/cocoa-dusted-tiramisu.png';
 const productImages = {
@@ -484,7 +484,7 @@ export default function Storefront() {
           <a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a>
           <a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a>
         </nav>
-        <div className="header-actions"><button className="mobile-search" onClick={e => navigateToRoute(e, '/menu')} aria-label="Browse desserts"><Search size={20} /></button><button className="cart-trigger" onClick={() => open('cart')}><ShoppingBag size={16} /><span>Your Box</span><b>{count}</b></button><button className="menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation">{mobileNav ? <X /> : <Menu />}</button></div>
+        <div className="header-actions"><button className="cart-trigger" onClick={() => open('cart')}><ShoppingBag size={16} /><span>Your Box</span><b>{count}</b></button><button className="menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle navigation">{mobileNav ? <X /> : <Menu />}</button></div>
       </header>
       {mobileNav && (
         <nav className="mobile-nav open">
@@ -575,20 +575,6 @@ export default function Storefront() {
                 </div>
               </Reveal>
             ))}</div>
-          </div>
-          <div className="menu-foot">
-            <div className="menu-foot-inner">
-              <span className="menu-foot-mark" aria-hidden="true"><Package size={21} /></span>
-              <div className="menu-foot-copy">
-                <span className="menu-foot-eyebrow">A LITTLE HELP CHOOSING</span>
-                <p>Not sure which size? <strong>Start with the Classic.</strong></p>
-              </div>
-              <div className="menu-foot-pick">
-                <span>THE CROWD FAVORITE</span>
-                <strong>Classic <i>200 g · ₹129</i></strong>
-              </div>
-              <button className="text-button" onClick={() => { updateQty('classic', 1); open('cart'); }}>Start with Classic <ArrowUpRight size={16} /></button>
-            </div>
           </div>
         </section>
         <WaveDivider variant="to-dark" bg="var(--paper)" fill="#241108" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
