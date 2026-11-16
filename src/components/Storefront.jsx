@@ -569,7 +569,15 @@ export default function Storefront() {
                       </div>
                       <small>Box total {money(item.price)}</small>
                     </div>
-                    <button className="add-button listing-add" onClick={() => updateQty(item.id, 1)}>Add to box <span>＋</span></button>
+                    {(qty[item.id] || 0) > 0 ? (
+                      <div className="add-button listing-add quantity-control" role="group" aria-label={`${item.name} quantity`}>
+                        <button type="button" className="quantity-step" onClick={() => updateQty(item.id, -1)} aria-label={`Decrease ${item.name} quantity`}><Minus size={13} /></button>
+                        <span className="quantity-value" aria-live="polite" aria-atomic="true">{qty[item.id]}</span>
+                        <button type="button" className="quantity-step" onClick={() => updateQty(item.id, 1)} aria-label={`Increase ${item.name} quantity`}><Plus size={13} /></button>
+                      </div>
+                    ) : (
+                      <button className="add-button listing-add" onClick={() => updateQty(item.id, 1)}>Add to box <span>＋</span></button>
+                    )}
                   </div>
                 </div>
               </Reveal>
@@ -617,7 +625,6 @@ export default function Storefront() {
             <Reveal className="story-copy" delay={0.12}>
               <div className="story-eyebrow-container">
                 <div className="story-eyebrow-emblem" aria-hidden="true">
-                  <span className="eyebrow-line" />
                   <span className="eyebrow-cake-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="17" height="17">
                       <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" />
@@ -631,7 +638,6 @@ export default function Storefront() {
                       <path d="M17 4h.01" />
                     </svg>
                   </span>
-                  <span className="eyebrow-line" />
                 </div>
                 <div className="story-eyebrow-label">A SWEET LITTLE STORY</div>
               </div>
@@ -696,7 +702,8 @@ export default function Storefront() {
           </div>
         </section>
         <WaveDivider variant="to-light" bg="#241108" fill="var(--paper)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
-        <ExperienceSection onTrackOrder={() => open('track')} />
+        <ExperienceSection />
+        <TrackingSection onTrackOrder={() => open('track')} tracking={tracking} />
         <CurveDivider />
         <section className="scan-section" id="scan"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with TiraMio. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order TiraMio on WhatsApp" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
         <WaveDivider variant="to-dark" bg="var(--paper)" fill="var(--espresso)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
@@ -1042,8 +1049,15 @@ const experienceHighlights = [
 ];
 
 const trackingStages = ['Placed', 'Preparing', 'On the way', 'Delivered'];
+const trackingStageByStatus = {
+  placed: 0,
+  confirmed: 0,
+  preparing: 1,
+  out_for_delivery: 2,
+  delivered: 3
+};
 
-function ExperienceSection({ onTrackOrder }) {
+function ExperienceSection() {
   return (
     <section className="experience-section" id="moments">
       <div className="experience-layout">
@@ -1075,30 +1089,42 @@ function ExperienceSection({ onTrackOrder }) {
               </Reveal>
             ))}
           </div>
-
-          <section className="experience-tracking" id="track" aria-labelledby="experience-tracking-title">
-            <div className="experience-tracking-copy">
-              <h3 id="experience-tracking-title">Where’s my <em>TiraMio?</em></h3>
-              <p>Have an order reference? Follow your order from confirmation to the first spoonful.</p>
-              <button className="experience-tracking-button" onClick={onTrackOrder}>
-                Track my order <ArrowUpRight size={17} />
-              </button>
-            </div>
-            <div
-              className="experience-timeline"
-              role="img"
-              aria-label="Illustrative order timeline: Placed, Preparing, On the way, Delivered. This is not a live order status."
-            >
-              <div className="experience-timeline-line" aria-hidden="true" />
-              {trackingStages.map((stage, index) => (
-                <div className="experience-timeline-stage" key={stage}>
-                  <span className={`experience-timeline-dot${index === 0 ? ' is-active' : ''}`} aria-hidden="true" />
-                  <span>{stage}</span>
-                </div>
-              ))}
-            </div>
-          </section>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function TrackingSection({ onTrackOrder, tracking }) {
+  const activeStage = tracking ? trackingStageByStatus[tracking.status] ?? -1 : -1;
+  const timelineLabel = tracking
+    ? `Current order status: ${String(tracking.status).replaceAll('_', ' ')}. Stages: ${trackingStages.join(', ')}.`
+    : `Order stages: ${trackingStages.join(', ')}. Track an order to see its current status.`;
+
+  return (
+    <section className="experience-tracking-section" aria-label="Order tracking">
+      <div className="experience-layout experience-tracking-layout">
+        <section className="experience-tracking" id="track" aria-labelledby="experience-tracking-title">
+          <div className="experience-tracking-copy">
+            <h3 id="experience-tracking-title">Where’s my <em>TiraMio?</em></h3>
+            <p>Have an order reference? Follow your order from confirmation to the first spoonful.</p>
+            <button className="experience-tracking-button" onClick={onTrackOrder}>
+              Track my order <ArrowUpRight size={17} />
+            </button>
+          </div>
+          <div className="experience-timeline" role="img" aria-label={timelineLabel}>
+            <div className="experience-timeline-line" aria-hidden="true" />
+            {trackingStages.map((stage, index) => (
+              <div className="experience-timeline-stage" key={stage}>
+                <span
+                  className={`experience-timeline-dot${index === activeStage ? ' is-active' : index < activeStage ? ' is-complete' : ''}`}
+                  aria-hidden="true"
+                />
+                <span>{stage}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </section>
   );
