@@ -509,10 +509,10 @@ export default function Storefront() {
           </div>
           <div className="hero-inner">
             <div className="hero-copy">
-              <div className="eyebrow reveal-block"><span className="eyebrow-line" /> A CLASSIC, WITH A LITTLE LOVE <span className="eyebrow-line" /></div>
+              <div className="eyebrow reveal-block"><span className="eyebrow-line" /> A LITTLE MOMENT OF INDULGENCE <span className="eyebrow-line" /></div>
               <h1 className="hero-title reveal-block">
-                <span className="hero-word-line"><span className="hero-word">Some</span> <span className="hero-word">days</span> <span className="hero-word">call</span></span>
-                <span className="hero-word-line"><span className="hero-word">for</span> <span className="hero-word hero-word-accent">another</span></span>
+                <span className="hero-word-line"><span className="hero-word">Some</span> <span className="hero-word">moments</span></span>
+                <span className="hero-word-line"><span className="hero-word">deserve</span> <span className="hero-word">an</span> <span className="hero-word hero-word-accent">extra</span></span>
                 <span className="hero-word-line"><span className="hero-word hero-word-accent">spoonful.</span></span>
               </h1>
               <p className="hero-tagline reveal-block">Layers of Love, in Every Bite.</p>
@@ -521,7 +521,7 @@ export default function Storefront() {
                 <a className="button button-dark" href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Explore Our Desserts <ArrowUpRight size={16} /></a>
                 <button className="button button-light" onClick={() => open('qr')}><CirclePlay size={18} /> Discover Our Story</button>
               </div>
-              <div className="hero-proof reveal-block"><span className="proof-stars">★★★★★</span><span>4.9 (2,300+ happy dessert lovers)</span></div>
+              <div className="hero-proof reveal-block"><span className="proof-stars">♥</span><span>MADE WITH LOVE · CREATED FOR YOU</span></div>
             </div>
           </div>
           <div className="hero-art hero-visual-wrap">
@@ -566,7 +566,6 @@ export default function Storefront() {
                       <div className="listing-price-line">
                         <strong>{item.unitValue}</strong>
                         {item.saving > 0 && <del>{money(item.referencePrice)}</del>}
-                        {item.saving > 0 && <span className="saving-pill">SAVE {money(item.saving)}</span>}
                       </div>
                       <small>Box total {money(item.price)}</small>
                     </div>

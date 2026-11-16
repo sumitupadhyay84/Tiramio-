@@ -5442,7 +5442,7 @@ button {
 }
 
 .menu-section .product-card.featured .product-buy {
-  background: linear-gradient(110deg, #ffd98f, #f8bb53);
+  background: linear-gradient(110deg, #dfc08a, #cda060);
 }
 
 .listing-price-line {
@@ -5478,6 +5478,18 @@ button {
 .menu-section .listing-add span {
   padding-left: 8px;
   font-size: 17px;
+}
+
+.menu-section .product-card.featured .listing-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-section .product-card.best-value .listing-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 1100px) {
