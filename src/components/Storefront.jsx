@@ -9,7 +9,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { AlertCircle, ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
 
-const productVisual = '/images/cocoa-dusted-tiramisu.png';
+const productVisual = '/images/cocoa-dusted-tiramisu.webp';
 const productImages = {
   mini: '/images/dearmisu-mini-card.webp',
   classic: '/images/dearmisu-classic-card.webp',
@@ -492,7 +492,7 @@ export default function Storefront() {
       <div className="scroll-progress"><span className="progress-bar" /></div>
       <div className="announcement"><span className="sparkle">✦</span> A little box of happiness, made with care <span className="sparkle">✦</span></div>
       <header ref={headerRef} className="site-header" id="top">
-        <a className="brand" href="/" onClick={e => navigateToRoute(e, '/')} aria-label="Dear Misu home"><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.png" alt="Dear Misu Logo" width={39} height={39} /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
+        <a className="brand" href="/" onClick={e => navigateToRoute(e, '/')} aria-label="Dear Misu home"><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.webp" alt="" width={48} height={48} /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
         <nav className="desktop-nav">
           <a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a>
           <a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a>
@@ -540,9 +540,7 @@ export default function Storefront() {
             </div>
           </div>
           <div className="hero-art hero-visual-wrap">
-            <div className="hero-product-portrait">
-              <img src={productVisual} alt="A premium cocoa-dusted tiramisu dessert cup" fetchPriority="high" />
-            </div>
+            
             <div className="hero-note" aria-hidden="true">Made with<br /><em>love ♡</em></div>
             <div className="hero-badge"><span>THE</span><strong>Little<br />Luxury</strong><em>You Deserve</em></div>
           </div>
@@ -566,7 +564,7 @@ export default function Storefront() {
             <div className="product-grid">{catalogue.map((item, index) => (
               <Reveal key={item.id} delay={index * .1} className={`product-card ${item.id === 'classic' ? 'featured' : ''} ${item.id === 'share' ? 'best-value' : ''}`}>
                 <div className={`product-photo photo-${item.id}`}>
-                  <img className="product-open-gif" src={item.image} alt={`${item.name}, ${item.weight} tiramisu served on a plate`} loading="lazy" decoding="async" />
+                  <img className="product-open-gif" src={item.image} alt={`${item.name}, ${item.weight} tiramisu served on a plate`} width={712} height={515} loading="lazy" decoding="async" />
                   <span className={`photo-tag ${item.saving > 0 ? 'featured-tag' : ''}`}>
                     {item.id === 'mini' ? <Sparkles size={15} fill="currentColor" /> : item.id === 'classic' ? <Heart size={16} fill="currentColor" /> : <Package size={15} />}
                     {item.tag}
@@ -612,7 +610,7 @@ export default function Storefront() {
             </svg>
           </div>
           <div className="story-cocoa-dust" aria-hidden="true">
-            <img src="/images/cocoa-dust-flourish.png" alt="" />
+            
           </div>
 
           <div className="story-inner section-wrap">
@@ -622,7 +620,7 @@ export default function Storefront() {
                 <div className="story-card-cushion" aria-hidden="true" />
 
                 <div className="story-photo-card">
-                  <img src="/images/cocoa-dusted-tiramisu.png" alt="Cocoa-dusted tiramisu layered with cream in a serving box" width="1536" height="1024" loading="lazy" decoding="async" />
+                  <img src="/images/cocoa-dusted-tiramisu.webp" alt="Cocoa-dusted tiramisu layered with cream in a serving box" width="1200" height="800" loading="lazy" decoding="async" />
                   <div className="story-photo-script" aria-hidden="true">
                     <span>Big<br />happiness.</span>
                     <svg viewBox="0 0 160 12" fill="none">
@@ -720,7 +718,7 @@ export default function Storefront() {
         <ExperienceSection />
         <TrackingSection onTrackOrder={() => open('track')} tracking={tracking} />
         <CurveDivider />
-        <section className="scan-section" id="scan"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with Dear Misu. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20Dear%20Misu!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order Dear Misu on WhatsApp" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
+        <section className="scan-section" id="scan"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with Dear Misu. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20Dear%20Misu!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order Dear Misu on WhatsApp" width={470} height={470} loading="lazy" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
         <WaveDivider variant="to-dark" bg="var(--paper)" fill="var(--espresso)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
         <section className="closing-section"><div className="closing-inner section-wrap"><div className="closing-emblem" aria-hidden="true"><span /><span className="closing-cake"><i /><i /><i /></span><span /></div><p>One last spoon?</p><h2>Make room for <em>sweet things.</em></h2><a className="button button-cream" href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Order your Dear Misu <ArrowUpRight size={16} /></a></div></section>
       </main>
@@ -729,7 +727,7 @@ export default function Storefront() {
         <div className="footer-divider section-wrap" aria-hidden="true"><span>✦</span></div>
         <div className="footer-main section-wrap">
           <div className="footer-brand">
-            <a className="brand brand-footer" href="/" onClick={e => navigateToRoute(e, '/')}><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.png" alt="Dear Misu Logo" width={66} height={66} /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
+            <a className="brand brand-footer" href="/" onClick={e => navigateToRoute(e, '/')}><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.webp" alt="" width={48} height={48} /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
             <p>Layers of Love, in Every Bite.</p>
             <div className="footer-socials" aria-label="Social media">
               <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
@@ -750,7 +748,7 @@ export default function Storefront() {
       {modal === 'cart' && (
         <Modal onClose={close} className="cart-modal" showHeader={false}>
           <div className="cart-modal-art">
-            <img src={productVisual} alt="Cocoa-dusted tiramisu in a glass dessert cup" />
+            <img src={productVisual} alt="Cocoa-dusted tiramisu in a glass dessert cup" width={1200} height={800} loading="lazy" decoding="async" />
           </div>
           <div className="cart-modal-copy">
             <div className="eyebrow left">YOUR LITTLE BOX <span className="eyebrow-line" /></div>
@@ -1093,7 +1091,7 @@ export default function Storefront() {
             <h2>Scan. Order. <em>Smile.</em></h2>
             <div className="qr-code-decoration">
               <span className="qr-ray qr-ray-left" aria-hidden="true" />
-              <div className="qr-code-frame"><img src="/images/order-qr.png" alt="Scan to start a Dear Misu WhatsApp order" /></div>
+              <div className="qr-code-frame"><img src="/images/order-qr.png" alt="Scan to start a Dear Misu WhatsApp order" width={470} height={470} loading="lazy" /></div>
               <span className="qr-ray qr-ray-right" aria-hidden="true" />
             </div>
             <p className="qr-caption">Point your camera here to start a WhatsApp order.</p>
@@ -1143,10 +1141,10 @@ function ExperienceSection() {
         <figure className="experience-photo">
           <span className="experience-photo-shadow" aria-hidden="true" />
           <img
-            src="/images/cocoa-dusted-tiramisu.png"
+            src="/images/cocoa-dusted-tiramisu.webp"
             alt="Cocoa-dusted tiramisu layered with cream in a serving box"
-            width="1536"
-            height="1024"
+            width="1200"
+            height="800"
             loading="lazy"
             decoding="async"
           />
