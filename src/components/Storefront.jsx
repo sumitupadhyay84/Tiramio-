@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
 
 const productVisual = '/images/cocoa-dusted-tiramisu.png';
 const productImages = {
@@ -103,6 +103,8 @@ export default function Storefront() {
   const [qty, setQty] = useState({ mini: 0, classic: 0, share: 0 });
   const [modal, setModal] = useState('');
   const [toast, setToast] = useState('');
+  const [cartNotice, setCartNotice] = useState('');
+  const [cartShake, setCartShake] = useState(false);
   const [busy, setBusy] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [tracking, setTracking] = useState(null);
@@ -193,11 +195,15 @@ export default function Storefront() {
   const message = text => { setToast(text); window.clearTimeout(message.timer); message.timer = window.setTimeout(() => setToast(''), 2600); };
   const updateQty = (id, delta) => {
     setQty(old => ({ ...old, [id]: Math.max(0, (old[id] || 0) + delta) }));
-    if (delta > 0) message(`${catalogue.find(p => p.id === id)?.name || 'Dessert'} added to your box.`);
+    if (delta > 0) {
+      setCartNotice('');
+      message(`${catalogue.find(p => p.id === id)?.name || 'Dessert'} added to your box.`);
+    }
   };
   const open = id => setModal(id);
   const close = () => {
     setModal('');
+    setCartNotice('');
     if (checkoutStep === 'confirmed') {
       setCheckoutStep('details');
       setPaymentId('');
@@ -355,7 +361,16 @@ export default function Storefront() {
   };
 
   const showCheckout = () => {
-    if (!count) return message('Choose at least one TiraMio box first.');
+    if (!count) {
+      setCartNotice('You need to add to cart first');
+      setCartShake(false);
+      requestAnimationFrame(() => {
+        setCartShake(true);
+      });
+      setTimeout(() => setCartShake(false), 500);
+      return message('You need to add to cart first');
+    }
+    setCartNotice('');
     setCheckoutStep('details');
     setPaymentId('');
     setPaymentError('');
@@ -724,8 +739,8 @@ export default function Storefront() {
           </div>
           <div className="footer-links">
             <div><b>EXPLORE</b><a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a><a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a><a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a><a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a></div>
-            <div><b>SAY HELLO</b><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp Us</a><button onClick={() => open('qr')}><QrCode size={20} />Scan &amp; Order</button><a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer"><Instagram size={20} />Instagram: @TiraMioTiramisu*</a></div>
-            <div><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span><span><Info size={20} />*Handle availability to be checked</span></div>
+            <div><b>SAY HELLO</b><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp Us</a><button onClick={() => open('qr')}><QrCode size={20} />Scan &amp; Order</button><a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer"><Instagram size={20} />Instagram: @TiraMioTiramisu</a></div>
+            <div><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span></div>
           </div>
         </div>
         <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} TiraMio Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20} /></b></span><a href="/" onClick={e => navigateToRoute(e, '/')}>Back to top <ArrowUpRight size={17} /></a></div>
@@ -733,7 +748,64 @@ export default function Storefront() {
 
       <div className="floating-order"><button className="floating-whatsapp" onClick={() => open('qr')}><QrCode size={13} /> Scan & order</button><button className="floating-cart" onClick={() => open('cart')}>Box <b>{count}</b><strong>{money(total)}</strong></button></div>
 
-      {modal === 'cart' && <Modal onClose={close} className="cart-modal" showHeader={false}><div className="cart-modal-art"><img src={productVisual} alt="Cocoa-dusted tiramisu in a glass dessert cup" /></div><div className="cart-modal-copy"><div className="eyebrow left">YOUR LITTLE BOX <span className="eyebrow-line" /></div><h2>A Good Choice.</h2>{chosen.length ? <div className="cart-lines">{chosen.map(item => <div className="cart-line" key={item.id}><div><strong>{item.name}</strong><small>{item.weight} · {money(item.price)} each</small></div><div className="cart-line-actions"><button onClick={() => updateQty(item.id, -1)} aria-label={`Remove one ${item.name}`}><Minus size={11} /></button><b>{qty[item.id]}</b><button onClick={() => updateQty(item.id, 1)} aria-label={`Add one ${item.name}`}><Plus size={11} /></button></div><strong>{money(item.price * qty[item.id])}</strong></div>)}</div> : <p className="empty-cart">Your box is waiting for something delicious.</p>}<div className="cart-footer"><div className="cart-summary"><span><ShoppingBag size={15} />Subtotal</span><strong>{money(total)}</strong></div><button className="button button-dark button-full" onClick={showCheckout}><ShoppingBag size={16} />Continue to Details <ArrowUpRight size={17} /></button></div></div></Modal>}
+      {modal === 'cart' && (
+        <Modal onClose={close} className="cart-modal" showHeader={false}>
+          <div className="cart-modal-art">
+            <img src={productVisual} alt="Cocoa-dusted tiramisu in a glass dessert cup" />
+          </div>
+          <div className="cart-modal-copy">
+            <div className="eyebrow left">YOUR LITTLE BOX <span className="eyebrow-line" /></div>
+            <h2>A Good Choice.</h2>
+            {chosen.length ? (
+              <div className="cart-lines">
+                {chosen.map(item => (
+                  <div className="cart-line" key={item.id}>
+                    <div>
+                      <strong>{item.name}</strong>
+                      <small>{item.weight} · {money(item.price)} each</small>
+                    </div>
+                    <div className="cart-line-actions">
+                      <button onClick={() => updateQty(item.id, -1)} aria-label={`Remove one ${item.name}`}><Minus size={11} /></button>
+                      <b>{qty[item.id]}</b>
+                      <button onClick={() => updateQty(item.id, 1)} aria-label={`Add one ${item.name}`}><Plus size={11} /></button>
+                    </div>
+                    <strong>{money(item.price * qty[item.id])}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-cart-wrap">
+                <p className="empty-cart">Your box is waiting for something delicious.</p>
+                <button
+                  type="button"
+                  className="button button-dark empty-cart-browse"
+                  onClick={() => { close(); window.location.hash = '#menu'; }}
+                >
+                  <Sparkles size={13} /> Browse Our Desserts
+                </button>
+              </div>
+            )}
+            <div className="cart-footer">
+              {cartNotice && !count && (
+                <div className="cart-pop-notice" role="alert">
+                  <AlertCircle size={15} />
+                  <span>{cartNotice}</span>
+                </div>
+              )}
+              <div className="cart-summary">
+                <span><ShoppingBag size={15} />Subtotal</span>
+                <strong>{money(total)}</strong>
+              </div>
+              <button
+                className={`button button-dark button-full ${cartShake ? 'cart-button-shake' : ''}`}
+                onClick={showCheckout}
+              >
+                <ShoppingBag size={16} />Continue to Details <ArrowUpRight size={17} />
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {modal === 'checkout' && (
         <Modal
@@ -1017,10 +1089,6 @@ export default function Storefront() {
 
       {modal === 'qr' && <Modal onClose={close} className="qr-order-modal" showHeader={false}>
         <div className="qr-order-layout">
-          <div className="qr-order-visual" aria-label="Tiramisu made for your next happy moment">
-            <p>Order on<br />WhatsApp <span>♡</span></p>
-            <svg className="qr-visual-arrow" viewBox="0 0 70 38" aria-hidden="true"><path d="M2 2C22 6 39 15 62 30M50 27l12 3-5-12" /></svg>
-          </div>
           <div className="qr-order-panel">
             <div className="eyebrow left">THE FASTEST WAY TO TIRAMIO <span className="eyebrow-line" /></div>
             <h2>Scan. Order. <em>Smile.</em></h2>
@@ -1036,7 +1104,19 @@ export default function Storefront() {
         </div>
       </Modal>}
 
-      {toast && <div className="toast show" role="status">{toast}</div>}
+      {toast && (
+        <div
+          className={`toast show ${toast.toLowerCase().includes('first') || toast.toLowerCase().includes('please') || toast.toLowerCase().includes('unable') || toast.toLowerCase().includes('valid') ? 'toast-alert' : 'toast-success'}`}
+          role="status"
+        >
+          {toast.toLowerCase().includes('first') || toast.toLowerCase().includes('please') || toast.toLowerCase().includes('unable') || toast.toLowerCase().includes('valid') ? (
+            <AlertCircle size={15} className="toast-icon-svg" />
+          ) : (
+            <Sparkles size={14} className="toast-icon-svg" />
+          )}
+          <span>{toast}</span>
+        </div>
+      )}
     </>
   );
 }
