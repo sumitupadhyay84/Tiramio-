@@ -492,7 +492,7 @@ export default function Storefront() {
       <div className="scroll-progress"><span className="progress-bar" /></div>
       <div className="announcement"><span className="sparkle">✦</span> A little box of happiness, made with care <span className="sparkle">✦</span></div>
       <header ref={headerRef} className="site-header" id="top">
-        <a className="brand" href="/" onClick={e => navigateToRoute(e, '/')} aria-label="Dear Misu home"><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.png" alt="" /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
+        <a className="brand" href="/" onClick={e => navigateToRoute(e, '/')} aria-label="Dear Misu home"><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.png" alt="Dear Misu Logo" width={39} height={39} /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
         <nav className="desktop-nav">
           <a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a>
           <a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a>
@@ -729,7 +729,7 @@ export default function Storefront() {
         <div className="footer-divider section-wrap" aria-hidden="true"><span>✦</span></div>
         <div className="footer-main section-wrap">
           <div className="footer-brand">
-            <a className="brand brand-footer" href="/" onClick={e => navigateToRoute(e, '/')}><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.png" alt="" /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
+            <a className="brand brand-footer" href="/" onClick={e => navigateToRoute(e, '/')}><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.png" alt="Dear Misu Logo" width={66} height={66} /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
             <p>Layers of Love, in Every Bite.</p>
             <div className="footer-socials" aria-label="Social media">
               <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
