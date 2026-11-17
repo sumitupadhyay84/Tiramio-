@@ -11,9 +11,9 @@ import { AlertCircle, ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, C
 
 const productVisual = '/images/cocoa-dusted-tiramisu.png';
 const productImages = {
-  mini: '/images/tiramio-mini-card.webp',
-  classic: '/images/tiramio-classic-card.webp',
-  share: '/images/tiramio-share-card.webp'
+  mini: '/images/dearmisu-mini-card.webp',
+  classic: '/images/dearmisu-classic-card.webp',
+  share: '/images/dearmisu-share-card.webp'
 };
 const products = [
   { id: 'mini', name: 'Dear Misu Mini', weight: '100 g', price: 69, referencePrice: 79, saving: 10, description: 'Your personal pause. Just enough to make the day sweeter.', image: productImages.mini, tag: 'PERSONAL TREAT · SAVE ₹10', unitValue: '₹69 / 100 g', valueNote: 'Save ₹10 on your personal box' },
@@ -351,9 +351,9 @@ export default function Storefront() {
       }
     }
     try {
-      const stored = parseInt(localStorage.getItem('tiramio_order_seq') || '1000', 10);
+      const stored = parseInt(localStorage.getItem('dearmisu_order_seq') || '1000', 10);
       const next = stored + 1;
-      localStorage.setItem('tiramio_order_seq', String(next));
+      localStorage.setItem('dearmisu_order_seq', String(next));
       return `TIRA-${String(next).padStart(4, '0')}`;
     } catch {
       return `TIRA-${Math.floor(1001 + Math.random() * 8999)}`;
