@@ -1,8 +1,8 @@
 {
-  "name": "tiramio-storefront",
+  "name": "Dearmisu-storefront",
   "version": "1.0.0",
   "private": true,
-  "description": "Responsive TiraMio Tiramisu storefront built with Next.js App Router.",
+  "description": "Responsive Dear Misu storefront built with Next.js App Router.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -1,7 +1,7 @@
 const PRODUCTS = {
-  mini: { id: 'mini', name: 'TiraMio Mini', weight: '100 g', price: 69 },
-  classic: { id: 'classic', name: 'TiraMio Classic', weight: '200 g', price: 129 },
-  share: { id: 'share', name: 'TiraMio Share Box', weight: '300 g', price: 189 }
+  mini: { id: 'mini', name: 'Dear Misu Mini', weight: '100 g', price: 69 },
+  classic: { id: 'classic', name: 'Dear Misu Classic', weight: '200 g', price: 129 },
+  share: { id: 'share', name: 'Dear Misu Share Box', weight: '300 g', price: 189 }
 };
 const PHONE = '918433198122';
 const cart = { mini: 0, classic: 0, share: 0 };
@@ -34,19 +34,19 @@ function add(id, delta = 1) {
 function openModal(id) { const modal = document.getElementById(id); modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
 function closeModal(id) { const modal = document.getElementById(id); modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
 function openCheckout() {
-  if (!itemCount()) { toast('Choose at least one TiraMio box first.'); return; }
+  if (!itemCount()) { toast('Choose at least one Dear Misu box first.'); return; }
   closeModal('cart-modal'); refreshCart(); openModal('checkout-modal');
 }
 function buildWhatsAppMessage(data) {
   const items = Object.entries(cart).filter(([, q]) => q > 0).map(([id, qty]) => `• ${PRODUCTS[id].name} (${PRODUCTS[id].weight}) × ${qty} = ${money(PRODUCTS[id].price * qty)}`).join('\n');
-  return `Hi TiraMio! I'd like to place an order.\n\n${items}\n\nSubtotal: ${money(subtotal())}\n\nName: ${data.name}\nMobile: ${data.phone}\nFulfilment: ${data.fulfilment}${data.address ? `\nAddress: ${data.address}` : ''}\nPayment preference: ${data.payment}${data.notes ? `\nNotes: ${data.notes}` : ''}\n\nPlease confirm availability and the final total. Thank you!`;
+  return `Hi Dear Misu! I'd like to place an order.\n\n${items}\n\nSubtotal: ${money(subtotal())}\n\nName: ${data.name}\nMobile: ${data.phone}\nFulfilment: ${data.fulfilment}${data.address ? `\nAddress: ${data.address}` : ''}\nPayment preference: ${data.payment}${data.notes ? `\nNotes: ${data.notes}` : ''}\n\nPlease confirm availability and the final total. Thank you!`;
 }
 function makeOrderRef() { return `TIRA-${Math.floor(1000 + Math.random() * 9000)}`; }
-function saveDemoOrder(order) { const existing = JSON.parse(localStorage.getItem('tiramio-demo-orders') || '[]'); existing.unshift(order); localStorage.setItem('tiramio-demo-orders', JSON.stringify(existing.slice(0, 20))); }
+function saveDemoOrder(order) { const existing = JSON.parse(localStorage.getItem('Dearmisu-demo-orders') || '[]'); existing.unshift(order); localStorage.setItem('Dearmisu-demo-orders', JSON.stringify(existing.slice(0, 20))); }
 function renderTimeline(order) {
   const steps = [
     ['Order placed', 'We have received your request.'],
-    ['Confirmed', 'TiraMio has confirmed your order.'],
+    ['Confirmed', 'Dear Misu has confirmed your order.'],
     ['Preparing', 'Your dessert is being prepared.'],
     ['Out for delivery', 'Your box is on its way.'],
     ['Delivered', 'Time for your first spoonful!']
@@ -88,7 +88,7 @@ $('#checkout-form').addEventListener('submit', e => {
 $('#track-form').addEventListener('submit', async e => {
   e.preventDefault(); const form = new FormData(e.currentTarget); const ref = String(form.get('orderId')).trim().toUpperCase(); const phone = String(form.get('phone')).trim();
   if (!/^[6-9]\d{9}$/.test(phone)) { toast('Enter the 10-digit mobile number used for the order.'); return; }
-  const orders = JSON.parse(localStorage.getItem('tiramio-demo-orders') || '[]');
+  const orders = JSON.parse(localStorage.getItem('Dearmisu-demo-orders') || '[]');
   const found = orders.find(o => o.ref.toUpperCase() === ref && o.phone === phone);
   if (found) $('#track-result').innerHTML = renderTimeline(found) + '<p>This is locally saved demo tracking. In production, order status comes from the secure order API.</p>';
   else $('#track-result').innerHTML = '<p><b>We couldn’t find that demo order.</b><br/>Please check the reference and mobile number, or message us on WhatsApp at 8433198122.</p>';
@@ -100,7 +100,7 @@ const observer = new IntersectionObserver(entries => entries.forEach(entry => { 
 $$('.reveal').forEach(el => observer.observe(el));
 refreshCart();
 
-// The silent TiraMio product film loops in the opening hero background.
+// The silent Dear Misu product film loops in the opening hero background.
 (() => {
   const heroVideo = document.querySelector('.hero-background-video');
   if (!heroVideo) return;
