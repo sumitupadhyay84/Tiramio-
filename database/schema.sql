@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Sequential order counter for TIRA-0001, TIRA-0002, etc.
+-- Sequential order counter for DEAR-0001, DEAR-0002, etc.
 CREATE SEQUENCE IF NOT EXISTS order_seq START WITH 1 INCREMENT BY 1 NO CYCLE;
 
 CREATE TABLE IF NOT EXISTS products (

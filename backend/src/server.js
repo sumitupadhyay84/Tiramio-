@@ -17,7 +17,7 @@ app.use(express.json({ limit: '100kb' }));
 app.use('/api/', rateLimit({ windowMs: 60_000, limit: 90, standardHeaders: 'draft-7', legacyHeaders: false }));
 
 const orderSchema = z.object({
-  orderRef: z.string().regex(/^TIRA-\d{4,}$/).optional(),
+  orderRef: z.string().regex(/^(DEAR|TIRA)-\d{4,}$/).optional(),
   customerName: z.string().trim().min(2).max(80),
   phone: z.string().regex(/^[6-9]\d{9}$/),
   fulfilment: z.enum(['Pickup', 'Delivery']),
@@ -33,13 +33,13 @@ const toPaise = rupees => Math.round(Number(rupees) * 100);
 const asyncRoute = handler => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 
 /**
- * Generate a sequential order reference like TIRA-0001, TIRA-0002, etc.
+ * Generate a sequential order reference like DEAR-0001, DEAR-0002, etc.
  * Uses a PostgreSQL sequence to guarantee uniqueness and ordering.
  */
 async function generateOrderRef(client) {
   const { rows } = await client.query("SELECT nextval('order_seq') AS seq");
   const seq = Number(rows[0].seq);
-  return `TIRA-${String(seq).padStart(4, '0')}`;
+  return `DEAR-${String(seq).padStart(4, '0')}`;
 }
 
 app.get('/health', (req, res) => res.json({ ok: true, service: 'dear-misu-api', timestamp: new Date().toISOString() }));
@@ -121,7 +121,7 @@ app.get('/api/orders/:orderRef/track', asyncRoute(async (req, res) => {
 
 app.post('/api/payments/confirm-upi', asyncRoute(async (req, res) => {
   const schema = z.object({
-    orderRef: z.string().regex(/^TIRA-\d{4,}$/),
+    orderRef: z.string().regex(/^(DEAR|TIRA)-\d{4,}$/),
     transactionId: z.string().min(4).max(100),
   });
   const parsed = schema.safeParse(req.body);
@@ -177,7 +177,7 @@ app.use((err, req, res, next) => {
 });
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  app.listen(port, () => console.log(`Dear Misu API listening on port ${port}`));
+  app.listen(port, () => console.log(`DearMisu API listening on port ${port}`));
 }
 
 module.exports = app;
