@@ -11,9 +11,9 @@ import { AlertCircle, ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, C
 
 const productVisual = '/images/cocoa-dusted-tiramisu.png';
 const productImages = {
-  mini: '/images/tiramio-mini-card.webp',
-  classic: '/images/tiramio-classic-card.webp',
-  share: '/images/tiramio-share-card.webp'
+  mini: '/images/dearmisu-mini-card.webp',
+  classic: '/images/dearmisu-classic-card.webp',
+  share: '/images/dearmisu-share-card.webp'
 };
 const products = [
   { id: 'mini', name: 'Dear Misu Mini', weight: '100 g', price: 69, referencePrice: 79, saving: 10, description: 'Your personal pause. Just enough to make the day sweeter.', image: productImages.mini, tag: 'PERSONAL TREAT · SAVE ₹10', unitValue: '₹69 / 100 g', valueNote: 'Save ₹10 on your personal box' },
@@ -351,12 +351,12 @@ export default function Storefront() {
       }
     }
     try {
-      const stored = parseInt(localStorage.getItem('tiramio_order_seq') || '1000', 10);
+      const stored = parseInt(localStorage.getItem('dearmisu_order_seq') || '1000', 10);
       const next = stored + 1;
-      localStorage.setItem('tiramio_order_seq', String(next));
-      return `TIRA-${String(next).padStart(4, '0')}`;
+      localStorage.setItem('dearmisu_order_seq', String(next));
+      return `DEAR-${String(next).padStart(4, '0')}`;
     } catch {
-      return `TIRA-${Math.floor(1001 + Math.random() * 8999)}`;
+      return `DEAR-${Math.floor(1001 + Math.random() * 8999)}`;
     }
   };
 
@@ -739,7 +739,6 @@ export default function Storefront() {
           </div>
           <div className="footer-links">
             <div><b>EXPLORE</b><a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a><a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a><a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a><a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a></div>
-            <div><b>SAY HELLO</b><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp Us</a><button onClick={() => open('qr')}><QrCode size={20} />Scan &amp; Order</button><a href="https://www.instagram.com/" target="_blank" rel="noreferrer"><Instagram size={20} />Instagram</a></div>
             <div><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span></div>
           </div>
         </div>
@@ -1085,7 +1084,7 @@ export default function Storefront() {
         </Modal>
       )}
 
-      {modal === 'track' && <Modal title={<>Track your <em>box.</em></>} eyebrow="ORDER UPDATES" onClose={close}><form className="track-form" onSubmit={trackOrder}><label>Order reference<input required value={trackingForm.orderId} onChange={e => setTrackingForm({ ...trackingForm, orderId: e.target.value })} placeholder="e.g. TIRA-2048" /></label><label>Mobile number<input required inputMode="numeric" maxLength={10} value={trackingForm.phone} onChange={e => setTrackingForm({ ...trackingForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="Phone used for order" /></label><button className="button button-dark button-full" type="submit">Find my order <ArrowUpRight size={16} /></button></form>{trackingError && <div className="track-result"><p>{trackingError}</p></div>}{tracking && <div className="track-result"><h3>{tracking.orderRef} · {String(tracking.status).replaceAll('_', ' ')}</h3><p>{tracking.customerName} · {tracking.fulfilment} · {money(tracking.total)}</p>{stageLabels.map((label, i) => <div className="status-line" key={label}><span className={`status-dot ${i <= currentStage ? 'complete' : ''}`} /><div className="status-copy"><b>{label}</b><small>{stageDescriptions[i]}</small></div></div>)}{tracking.events?.length > 0 && <div className="tracking-events"><b>Latest updates</b>{tracking.events.map((event, i) => <p key={i}>{String(event.status).replaceAll('_', ' ')} · {new Date(event.created_at).toLocaleString()}</p>)}</div>}</div>}<p className="form-disclaimer">Live order status appears after the Express API and PostgreSQL database are connected.</p></Modal>}
+      {modal === 'track' && <Modal title={<>Track your <em>box.</em></>} eyebrow="ORDER UPDATES" onClose={close}><form className="track-form" onSubmit={trackOrder}><label>Order reference<input required value={trackingForm.orderId} onChange={e => setTrackingForm({ ...trackingForm, orderId: e.target.value })} placeholder="e.g. DEAR-2048" /></label><label>Mobile number<input required inputMode="numeric" maxLength={10} value={trackingForm.phone} onChange={e => setTrackingForm({ ...trackingForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="Phone used for order" /></label><button className="button button-dark button-full" type="submit">Find my order <ArrowUpRight size={16} /></button></form>{trackingError && <div className="track-result"><p>{trackingError}</p></div>}{tracking && <div className="track-result"><h3>{tracking.orderRef} · {String(tracking.status).replaceAll('_', ' ')}</h3><p>{tracking.customerName} · {tracking.fulfilment} · {money(tracking.total)}</p>{stageLabels.map((label, i) => <div className="status-line" key={label}><span className={`status-dot ${i <= currentStage ? 'complete' : ''}`} /><div className="status-copy"><b>{label}</b><small>{stageDescriptions[i]}</small></div></div>)}{tracking.events?.length > 0 && <div className="tracking-events"><b>Latest updates</b>{tracking.events.map((event, i) => <p key={i}>{String(event.status).replaceAll('_', ' ')} · {new Date(event.created_at).toLocaleString()}</p>)}</div>}</div>}<p className="form-disclaimer">Live order status appears after the Express API and PostgreSQL database are connected.</p></Modal>}
 
       {modal === 'qr' && <Modal onClose={close} className="qr-order-modal" showHeader={false}>
         <div className="qr-order-layout">

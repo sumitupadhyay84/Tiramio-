@@ -41,7 +41,7 @@ function buildWhatsAppMessage(data) {
   const items = Object.entries(cart).filter(([, q]) => q > 0).map(([id, qty]) => `• ${PRODUCTS[id].name} (${PRODUCTS[id].weight}) × ${qty} = ${money(PRODUCTS[id].price * qty)}`).join('\n');
   return `Hi Dear Misu! I'd like to place an order.\n\n${items}\n\nSubtotal: ${money(subtotal())}\n\nName: ${data.name}\nMobile: ${data.phone}\nFulfilment: ${data.fulfilment}${data.address ? `\nAddress: ${data.address}` : ''}\nPayment preference: ${data.payment}${data.notes ? `\nNotes: ${data.notes}` : ''}\n\nPlease confirm availability and the final total. Thank you!`;
 }
-function makeOrderRef() { return `TIRA-${Math.floor(1000 + Math.random() * 9000)}`; }
+function makeOrderRef() { return `DEAR-${Math.floor(1000 + Math.random() * 9000)}`; }
 function saveDemoOrder(order) { const existing = JSON.parse(localStorage.getItem('Dearmisu-demo-orders') || '[]'); existing.unshift(order); localStorage.setItem('Dearmisu-demo-orders', JSON.stringify(existing.slice(0, 20))); }
 function renderTimeline(order) {
   const steps = [
