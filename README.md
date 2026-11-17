@@ -24,7 +24,7 @@ A responsive, premium dessert storefront for the Dear Misu brand.
 - `src/` — Next.js App Router frontend in JavaScript, with Motion scroll/entrance effects and the same brand design system.
 - `backend/` — Express API for server-priced orders, phone-verified tracking, order-status updates and Razorpay payment order/signature verification.
 - `database/schema.sql` — PostgreSQL schema and product seed data.
-- `public/images/` — dessert photography, three curated Dear Misu packaging stills, and a WhatsApp order QR. `public/videos/Dearmisu-scroll.mp4` — the supplied 8-second 1280×720 product film with its audio track removed.
+- `public/images/` — dessert photography, three curated Dear Misu packaging stills, and a WhatsApp order QR. `public/videos/dearmisu-scroll.mp4` — the supplied 8-second 1280×720 product film with its audio track removed.
 
 ## 1. Open the preview
 
