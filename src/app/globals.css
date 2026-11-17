@@ -6383,6 +6383,10 @@ main {
   pointer-events: none;
 }
 
+main + .section-curve-divider {
+  background: radial-gradient(ellipse at 50% 0%, #3b1b10 0%, #2b160f 62%, #241109 100%);
+}
+
 .section-curve-divider svg {
   display: block;
   width: 100%;
@@ -6428,10 +6432,6 @@ main {
 
   .section-curve-divider {
     height: 24px;
-  }
-
-  main + .section-curve-divider {
-    background: radial-gradient(ellipse at 50% 0%, #3b1b10 0%, #2b160f 62%, #241109 100%);
   }
 }
 
@@ -7376,6 +7376,7 @@ main {
   .story-heading {
     font-size: clamp(2.15rem, 9vw, 2.6rem);
     line-height: 1.08;
+    padding-inline: 0;
   }
 
   .story-lead {
@@ -7424,17 +7425,18 @@ main {
   .story-feature-text small {
     font-size: 9px;
   }
+
+  .story-action-row {
+    column-gap: clamp(12px, 3vw, 20px);
+    row-gap: 14px;
+  }
+
+  .story-cta-btn {
+    padding-inline: clamp(14px, 4vw, 18px);
+  }
 }
 
 @media (max-width: 350px) {
-  .story-inner {
-    width: calc(100% - 32px);
-  }
-
-  .story-heading {
-    padding-inline: 5px;
-  }
-
   .menu-section .product-buy {
     gap: 5px;
     padding: 5px;
