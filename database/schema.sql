@@ -95,9 +95,9 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_id TEXT;
 
 INSERT INTO products (slug, name, weight_grams, price_paise, short_description, badge, image_url, sort_order)
 VALUES
-  ('mini', 'Dear Misu Mini', 100, 6900, 'Your personal pause. Just enough to make the day sweeter.', 'PERSONAL TREAT · SAVE ₹10', '/images/Dearmisu-box-mini.webp', 1),
-  ('classic', 'Dear Misu Classic', 200, 12900, 'The just-right box for your favourite dessert moment.', 'MOST LOVED · SAVE ₹11', '/images/Dearmisu-box-classic.webp', 2),
-  ('share', 'Dear Misu Share Box', 300, 18900, 'More layers, more spoons, more reasons to gather.', 'BEST VALUE · SAVE ₹21', '/images/Dearmisu-box-share.webp', 3)
+  ('mini', 'Dear Misu Mini', 100, 6900, 'Your personal pause. Just enough to make the day sweeter.', 'PERSONAL TREAT · SAVE ₹10', '/images/dearmisu-mini-card.webp', 1),
+  ('classic', 'Dear Misu Classic', 200, 12900, 'The just-right box for your favourite dessert moment.', 'MOST LOVED · SAVE ₹11', '/images/dearmisu-classic-card.webp', 2),
+  ('share', 'Dear Misu Share Box', 300, 18900, 'More layers, more spoons, more reasons to gather.', 'BEST VALUE · SAVE ₹21', '/images/dearmisu-share-card.webp', 3)
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   weight_grams = EXCLUDED.weight_grams,
