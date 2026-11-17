@@ -8,9 +8,9 @@
 .hero-image-frame img{object-position:63% center}.tracking-events{border-top:1px solid #ddceb8;margin-top:14px;padding-top:12px}.tracking-events>b{display:block;color:#5e3b27;margin-bottom:8px}.tracking-events p{font-size:8px;color:#8f7964;margin:5px 0}
 
 
-.product-grid{gap:clamp(14px,2vw,26px);align-items:stretch}.product-card{position:relative;overflow:hidden;border:1px solid #eadbc7;border-radius:11px;background:linear-gradient(160deg,#fffdf8,#f6eddf);padding:9px;box-shadow:0 14px 35px rgba(54,31,18,.055)}.product-photo{height:auto;aspect-ratio:1.18/1;min-height:0;border-radius:7px;overflow:hidden;background:#4b2b1c}.product-photo:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(26,13,8,.05),transparent 43%,rgba(26,13,8,.15))}.product-photo img{width:100%;height:100%;object-fit:cover;object-position:center 54%;transition:transform .8s cubic-bezier(.2,.7,.2,1),filter .8s}.product-card:hover .product-photo img{transform:scale(1.045);filter:saturate(1.04)}.photo-tag{z-index:2;top:12px;left:12px;border-radius:2px;padding:7px 9px;box-shadow:0 3px 14px rgba(30,15,8,.12)}.quick-add{z-index:3;bottom:12px;right:12px}.product-info{padding:17px 12px 12px}.product-meta{font-size:.63rem;letter-spacing:.14em}.product-info h3{font-size:clamp(1.35rem,2vw,1.75rem);line-height:1.1}.product-info p{font-size:.77rem;line-height:1.65;min-height:3.2em}.product-buy{padding-top:14px}.product-buy strong{font-size:1.7rem}.add-button{font-size:.72rem;letter-spacing:.04em}.product-card.featured{border-color:#c3a071;box-shadow:0 18px 45px rgba(65,35,19,.12)}.product-card.featured:before{content:'TIRAMIO FAVOURITE';position:absolute;z-index:4;right:18px;top:18px;padding:6px 8px;background:#2b170f;color:#f3dfbd;border:1px solid #c5a26c;font-size:8px;letter-spacing:.12em}
+.product-grid{gap:clamp(14px,2vw,26px);align-items:stretch}.product-card{position:relative;overflow:hidden;border:1px solid #eadbc7;border-radius:11px;background:linear-gradient(160deg,#fffdf8,#f6eddf);padding:9px;box-shadow:0 14px 35px rgba(54,31,18,.055)}.product-photo{height:auto;aspect-ratio:1.18/1;min-height:0;border-radius:7px;overflow:hidden;background:#4b2b1c}.product-photo:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(26,13,8,.05),transparent 43%,rgba(26,13,8,.15))}.product-photo img{width:100%;height:100%;object-fit:cover;object-position:center 54%;transition:transform .8s cubic-bezier(.2,.7,.2,1),filter .8s}.product-card:hover .product-photo img{transform:scale(1.045);filter:saturate(1.04)}.photo-tag{z-index:2;top:12px;left:12px;border-radius:2px;padding:7px 9px;box-shadow:0 3px 14px rgba(30,15,8,.12)}.quick-add{z-index:3;bottom:12px;right:12px}.product-info{padding:17px 12px 12px}.product-meta{font-size:.63rem;letter-spacing:.14em}.product-info h3{font-size:clamp(1.35rem,2vw,1.75rem);line-height:1.1}.product-info p{font-size:.77rem;line-height:1.65;min-height:3.2em}.product-buy{padding-top:14px}.product-buy strong{font-size:1.7rem}.add-button{font-size:.72rem;letter-spacing:.04em}.product-card.featured{border-color:#c3a071;box-shadow:0 18px 45px rgba(65,35,19,.12)}.product-card.featured:before{content:'DEAR MISU FAVOURITE';position:absolute;z-index:4;right:18px;top:18px;padding:6px 8px;background:#2b170f;color:#f3dfbd;border:1px solid #c5a26c;font-size:8px;letter-spacing:.12em}
 
-/* TiraMio responsive art direction: local CSS, no runtime stylesheet dependency */
+/* Dear Misu responsive art direction: local CSS, no runtime stylesheet dependency */
 .hero.section-wrap{
   position:relative;isolation:isolate;display:block;width:100%;max-width:none;margin:0;overflow:hidden;
   min-height:clamp(640px,calc(100svh - 113px),820px);padding:0;background:#1b100c;
@@ -186,3 +186,14 @@
 
 html { scroll-behavior: smooth; scroll-padding-top: 85px; }
 #menu, #story, #track, #scan { scroll-margin-top: 85px; }
+
+.brand-logo{display:block;width:104px;height:74px;object-fit:contain}@media(max-width:760px){.brand-logo{width:88px;height:68px}}
+
+.brand-image-mark{overflow:hidden;background:transparent;box-shadow:none}.brand-image-mark img{display:block;width:100%;height:100%;object-fit:contain}
+
+.site-header .brand-image-mark, .site-header.is-scrolled .brand-image-mark, .brand-footer .brand-image-mark { width: 48px; height: 48px; border: 0; background: transparent; box-shadow: none; }
+.site-header .brand-image-mark img, .site-header.is-scrolled .brand-image-mark img, .brand-footer .brand-image-mark img { width: 100%; height: 100%; object-fit: contain; }
+@media (max-width: 390px) { .site-header .brand-image-mark, .site-header.is-scrolled .brand-image-mark { width: 34px; height: 34px; } }
+
+.site-header .brand-copy small { color: #7c5641; font-weight: 800; }
+.brand-copy small { letter-spacing: 0.21em; text-align: center; margin-top: 5px; font-size: 10px; }

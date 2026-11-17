@@ -1,9 +1,9 @@
-# TiraMio Tiramisu — Storefront
+# Dear Misu Tiramisu — Storefront
 
-A responsive, premium dessert storefront for the TiraMio brand.
+A responsive, premium dessert storefront for the Dear Misu brand.
 
 **Brand identity**
-- Brand: TiraMio Tiramisu
+- Brand: Dear Misu Tiramisu
 - Tagline: Layers of Love, in Every Bite.
 - Palette: espresso brown, mascarpone cream, cocoa, and muted gold
 - Confirmed contact: WhatsApp `8433198122`
@@ -24,7 +24,7 @@ A responsive, premium dessert storefront for the TiraMio brand.
 - `src/` — Next.js App Router frontend in JavaScript, with Motion scroll/entrance effects and the same brand design system.
 - `backend/` — Express API for server-priced orders, phone-verified tracking, order-status updates and Razorpay payment order/signature verification.
 - `database/schema.sql` — PostgreSQL schema and product seed data.
-- `public/images/` — dessert photography, three curated TiraMio packaging stills, and a WhatsApp order QR. `public/videos/tiramio-scroll.mp4` — the supplied 8-second 1280×720 product film with its audio track removed.
+- `public/images/` — dessert photography, three curated Dear Misu packaging stills, and a WhatsApp order QR. `public/videos/Dearmisu-scroll.mp4` — the supplied 8-second 1280×720 product film with its audio track removed.
 
 ## 1. Open the preview
 
@@ -54,7 +54,7 @@ Set `NEXT_PUBLIC_API_URL` in `.env.local` to the deployed Express API URL. Keep 
 
 ## 3. Run the Express + PostgreSQL backend
 
-Create a PostgreSQL database named `tiramio`, then:
+Create a PostgreSQL database named `Dearmisu`, then:
 
 ```bash
 cd backend
@@ -108,7 +108,7 @@ Restart the API and test in Razorpay test mode before going live. The backend ve
 Before accepting public orders, fill in these business details:
 
 1. Actual business email (the previous design used a placeholder email, so this website intentionally does not publish it).
-2. Confirm whether `@TiraMioTiramisu` is available and claim the matching social handle.
+2. Choose and claim a matching social handle.
 3. Pickup location, delivery service area, delivery fee, delivery slots and minimum order (if any).
 4. Product ingredients, allergen statement, storage and best-before information based on the actual recipe and applicable food-label rules.
 5. FSSAI registration/licence details and other required business disclosures, as applicable.

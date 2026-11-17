@@ -7586,3 +7586,13 @@ main + .section-curve-divider {
     padding: 38px 22px 22px;
   }
 }
+
+.brand-image-mark { overflow: hidden; background: transparent; box-shadow: none; }
+.brand-image-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+.site-header .brand-image-mark, .site-header.is-scrolled .brand-image-mark, .brand-footer .brand-image-mark { width: 48px; height: 48px; border: 0; background: transparent; box-shadow: none; }
+.site-header .brand-image-mark img, .site-header.is-scrolled .brand-image-mark img, .brand-footer .brand-image-mark img { width: 100%; height: 100%; object-fit: contain; }
+@media (max-width: 390px) { .site-header .brand-image-mark, .site-header.is-scrolled .brand-image-mark { width: 34px; height: 34px; } }
+
+.site-header .brand-copy small { color: #7c5641; font-weight: 800; }
+.brand-copy small { letter-spacing: 0.21em; text-align: center; margin-top: 5px; font-size: 10px; }

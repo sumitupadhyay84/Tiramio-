@@ -1,12 +1,13 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'TiraMio Tiramisu | Layers of Love, in Every Bite',
-  description: 'A little box of happiness. Explore TiraMio Mini, Classic and Share Box tiramisu and order directly on WhatsApp.',
-  applicationName: 'TiraMio Tiramisu',
+  title: 'Dear Misu Tiramisu | Layers of Love, in Every Bite',
+  description: 'A little box of happiness. Explore Dear Misu Mini, Classic and Share Box tiramisu and order directly on WhatsApp.',
+  applicationName: 'Dear Misu Tiramisu',
+  icons: { icon: '/images/dear-misu-logo.png', apple: '/images/dear-misu-logo.png' },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com'),
   openGraph: {
-    title: 'TiraMio Tiramisu',
+    title: 'Dear Misu Tiramisu',
     description: 'Layers of Love, in Every Bite.',
     type: 'website'
   }

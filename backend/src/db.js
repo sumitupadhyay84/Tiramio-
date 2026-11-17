@@ -7,7 +7,7 @@ if (!databaseUrl) {
 }
 
 const pool = new Pool({
-  connectionString: databaseUrl || 'postgresql://localhost:5432/tiramio',
+  connectionString: databaseUrl || 'postgresql://localhost:5432/Dearmisu',
   ssl: process.env.NODE_ENV === 'production' || (databaseUrl && !databaseUrl.includes('localhost'))
     ? { rejectUnauthorized: false }
     : false,

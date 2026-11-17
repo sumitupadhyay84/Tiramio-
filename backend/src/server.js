@@ -42,7 +42,7 @@ async function generateOrderRef(client) {
   return `TIRA-${String(seq).padStart(4, '0')}`;
 }
 
-app.get('/health', (req, res) => res.json({ ok: true, service: 'tiramio-api', timestamp: new Date().toISOString() }));
+app.get('/health', (req, res) => res.json({ ok: true, service: 'dear-misu-api', timestamp: new Date().toISOString() }));
 
 app.get('/api/orders/next-ref', asyncRoute(async (req, res) => {
   const client = await pool.connect();
@@ -177,7 +177,7 @@ app.use((err, req, res, next) => {
 });
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  app.listen(port, () => console.log(`TiraMio API listening on port ${port}`));
+  app.listen(port, () => console.log(`Dear Misu API listening on port ${port}`));
 }
 
 module.exports = app;

@@ -16,9 +16,9 @@ const productImages = {
   share: '/images/tiramio-share-card.webp'
 };
 const products = [
-  { id: 'mini', name: 'TiraMio Mini', weight: '100 g', price: 69, referencePrice: 79, saving: 10, description: 'Your personal pause. Just enough to make the day sweeter.', image: productImages.mini, tag: 'PERSONAL TREAT · SAVE ₹10', unitValue: '₹69 / 100 g', valueNote: 'Save ₹10 on your personal box' },
-  { id: 'classic', name: 'TiraMio Classic', weight: '200 g', price: 129, referencePrice: 140, saving: 11, description: 'The just-right box for your favourite dessert moment.', image: productImages.classic, tag: 'MOST LOVED · SAVE ₹11', unitValue: '₹129 / 200 g', valueNote: 'Save ₹9 compared with two Mini boxes' },
-  { id: 'share', name: 'TiraMio Share Box', weight: '300 g', price: 189, referencePrice: 210, saving: 21, description: 'More layers, more spoons, more reasons to gather.', image: productImages.share, tag: 'BEST VALUE · SAVE ₹21', unitValue: '₹189 / 300 g', valueNote: 'Save ₹18 compared with three Mini boxes' }
+  { id: 'mini', name: 'Dear Misu Mini', weight: '100 g', price: 69, referencePrice: 79, saving: 10, description: 'Your personal pause. Just enough to make the day sweeter.', image: productImages.mini, tag: 'PERSONAL TREAT · SAVE ₹10', unitValue: '₹69 / 100 g', valueNote: 'Save ₹10 on your personal box' },
+  { id: 'classic', name: 'Dear Misu Classic', weight: '200 g', price: 129, referencePrice: 140, saving: 11, description: 'The just-right box for your favourite dessert moment.', image: productImages.classic, tag: 'MOST LOVED · SAVE ₹11', unitValue: '₹129 / 200 g', valueNote: 'Save ₹9 compared with two Mini boxes' },
+  { id: 'share', name: 'Dear Misu Share Box', weight: '300 g', price: 189, referencePrice: 210, saving: 21, description: 'More layers, more spoons, more reasons to gather.', image: productImages.share, tag: 'BEST VALUE · SAVE ₹21', unitValue: '₹189 / 300 g', valueNote: 'Save ₹18 compared with three Mini boxes' }
 ];
 const api = process.env.NEXT_PUBLIC_API_URL || '';
 const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918433198122';
@@ -445,7 +445,7 @@ export default function Storefront() {
       }
 
       const lines = chosen.map(item => `• ${item.name} (${item.weight}) × ${qty[item.id]} = ${money(item.price * qty[item.id])}`).join('\n');
-      const text = `Hi TiraMio! I have completed the UPI payment for my order.\n\n` +
+      const text = `Hi Dear Misu! I have completed the UPI payment for my order.\n\n` +
         `✅ *PAYMENT CONFIRMED VIA UPI*\n` +
         `💳 *Payment ID / UTR:* ${cleanPaymentId}\n` +
         `🧾 *Order ID:* ${currentOrderRef}\n` +
@@ -484,7 +484,7 @@ export default function Storefront() {
 
   const timeline = ['placed', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
   const stageLabels = ['Order placed', 'Confirmed', 'Preparing', 'On the way', 'Delivered'];
-  const stageDescriptions = ['Your request has reached TiraMio.', 'Your order is confirmed.', 'Your dessert is being prepared.', 'Your box is on its way.', 'Time for your first spoonful!'];
+  const stageDescriptions = ['Your request has reached Dear Misu.', 'Your order is confirmed.', 'Your dessert is being prepared.', 'Your box is on its way.', 'Time for your first spoonful!'];
   const currentStage = tracking ? Math.max(0, timeline.indexOf(tracking.status)) : 0;
 
   return (
@@ -492,7 +492,7 @@ export default function Storefront() {
       <div className="scroll-progress"><span className="progress-bar" /></div>
       <div className="announcement"><span className="sparkle">✦</span> A little box of happiness, made with care <span className="sparkle">✦</span></div>
       <header ref={headerRef} className="site-header" id="top">
-        <a className="brand" href="/" onClick={e => navigateToRoute(e, '/')} aria-label="TiraMio home"><span className="brand-mark"><span className="cake-stack"><i /><i /><i /></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
+        <a className="brand" href="/" onClick={e => navigateToRoute(e, '/')} aria-label="Dear Misu home"><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.png" alt="" /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
         <nav className="desktop-nav">
           <a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a>
           <a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a>
@@ -510,7 +510,7 @@ export default function Storefront() {
         </nav>
       )}
       <main>
-        <section ref={heroRef} className="hero section-wrap" aria-label="Welcome to TiraMio">
+        <section ref={heroRef} className="hero section-wrap" aria-label="Welcome to Dear Misu">
           <div className="hero-ambient" aria-hidden="true">
             <span className="orb orb-one" />
             <span className="orb orb-two" />
@@ -667,7 +667,7 @@ export default function Storefront() {
                 </span>
               </h2>
 
-              <p className="story-lead">TiraMio is our love letter to the little moments that deserve something special.</p>
+              <p className="story-lead">Dear Misu is our love letter to the little moments that deserve something special.</p>
 
               <p className="story-desc">
                 Inspired by the classic Italian favourite, every box brings together coffee-kissed sponge, soft cream and cocoa in a few perfectly indulgent layers. Made to be opened, shared, savoured — and remembered.
@@ -720,30 +720,30 @@ export default function Storefront() {
         <ExperienceSection />
         <TrackingSection onTrackOrder={() => open('track')} tracking={tracking} />
         <CurveDivider />
-        <section className="scan-section" id="scan"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with TiraMio. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order TiraMio on WhatsApp" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
+        <section className="scan-section" id="scan"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with Dear Misu. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20Dear%20Misu!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order Dear Misu on WhatsApp" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
         <WaveDivider variant="to-dark" bg="var(--paper)" fill="var(--espresso)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
-        <section className="closing-section"><div className="closing-inner section-wrap"><div className="closing-emblem" aria-hidden="true"><span /><span className="closing-cake"><i /><i /><i /></span><span /></div><p>One last spoon?</p><h2>Make room for <em>sweet things.</em></h2><a className="button button-cream" href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Order your TiraMio <ArrowUpRight size={16} /></a></div></section>
+        <section className="closing-section"><div className="closing-inner section-wrap"><div className="closing-emblem" aria-hidden="true"><span /><span className="closing-cake"><i /><i /><i /></span><span /></div><p>One last spoon?</p><h2>Make room for <em>sweet things.</em></h2><a className="button button-cream" href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Order your Dear Misu <ArrowUpRight size={16} /></a></div></section>
       </main>
       <CurveDivider />
       <footer className="site-footer">
         <div className="footer-divider section-wrap" aria-hidden="true"><span>✦</span></div>
         <div className="footer-main section-wrap">
           <div className="footer-brand">
-            <a className="brand brand-footer" href="/" onClick={e => navigateToRoute(e, '/')}><span className="brand-mark"><span className="cake-stack"><i /><i /><i /></span></span><span className="brand-copy"><strong>TiraMio</strong><small>T I R A M I S U</small></span></a>
+            <a className="brand brand-footer" href="/" onClick={e => navigateToRoute(e, '/')}><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.png" alt="" /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
             <p>Layers of Love, in Every Bite.</p>
             <div className="footer-socials" aria-label="Social media">
-              <a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
+              <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
               <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={20} /></a>
               <a href="https://www.youtube.com/" target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube size={20} /></a>
             </div>
           </div>
           <div className="footer-links">
             <div><b>EXPLORE</b><a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a><a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a><a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a><a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a></div>
-            <div><b>SAY HELLO</b><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp Us</a><button onClick={() => open('qr')}><QrCode size={20} />Scan &amp; Order</button><a href="https://www.instagram.com/TiraMioTiramisu/" target="_blank" rel="noreferrer"><Instagram size={20} />Instagram: @TiraMioTiramisu</a></div>
+            <div><b>SAY HELLO</b><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp Us</a><button onClick={() => open('qr')}><QrCode size={20} />Scan &amp; Order</button><a href="https://www.instagram.com/" target="_blank" rel="noreferrer"><Instagram size={20} />Instagram</a></div>
             <div><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span></div>
           </div>
         </div>
-        <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} TiraMio Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20} /></b></span><a href="/" onClick={e => navigateToRoute(e, '/')}>Back to top <ArrowUpRight size={17} /></a></div>
+        <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} Dear Misu Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20} /></b></span><a href="/" onClick={e => navigateToRoute(e, '/')}>Back to top <ArrowUpRight size={17} /></a></div>
       </footer>
 
       <div className="floating-order"><button className="floating-whatsapp" onClick={() => open('qr')}><QrCode size={13} /> Scan & order</button><button className="floating-cart" onClick={() => open('cart')}>Box <b>{count}</b><strong>{money(total)}</strong></button></div>
@@ -815,7 +815,7 @@ export default function Storefront() {
             ) : checkoutStep === 'payment' ? (
               <>Pay via <em>UPI.</em></>
             ) : (
-              <>Let’s get you <em>your TiraMio.</em></>
+              <>Let’s get you <em>your Dear Misu.</em></>
             )
           }
           eyebrow={
@@ -930,7 +930,7 @@ export default function Storefront() {
                   <div className="qr-image-wrapper">
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-                        `upi://pay?pa=${merchantUpi}&pn=TiraMio%20Tiramisu&am=${total}&cu=INR&tn=Order%20${currentOrderRef}`
+                        `upi://pay?pa=${merchantUpi}&pn=Dear Misu%20Tiramisu&am=${total}&cu=INR&tn=Order%20${currentOrderRef}`
                       )}`}
                       alt="UPI QR Code"
                       width={180}
@@ -944,7 +944,7 @@ export default function Storefront() {
                   {/* Primary: Generic UPI intent - opens app chooser on Android / passes to iOS UPI apps */}
                   <a
                     className="button button-dark button-full upi-app-launch upi-primary-btn"
-                    href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}&tr=${encodeURIComponent(currentOrderRef)}`}
+                    href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('Dear Misu Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}&tr=${encodeURIComponent(currentOrderRef)}`}
                     onClick={e => {
                       // On desktop/unsupported: fallback to copying UPI ID
                       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -962,37 +962,37 @@ export default function Storefront() {
                   <div className="upi-apps-grid">
 
                     {/* Google Pay */}
-                    <a className="upi-app-pill" href={`gpay://upi/pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with Google Pay">
+                    <a className="upi-app-pill" href={`gpay://upi/pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('Dear Misu Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with Google Pay">
                       <img src="/images/upi/gpay.webp" alt="Google Pay" className="upi-app-logo-img" width={40} height={40} loading="eager" />
                       <span>GPay</span>
                     </a>
 
                     {/* PhonePe */}
-                    <a className="upi-app-pill" href={`phonepe://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with PhonePe">
+                    <a className="upi-app-pill" href={`phonepe://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('Dear Misu Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with PhonePe">
                       <img src="/images/upi/phonepe.webp" alt="PhonePe" className="upi-app-logo-img" width={40} height={40} loading="eager" />
                       <span>PhonePe</span>
                     </a>
 
                     {/* Paytm */}
-                    <a className="upi-app-pill" href={`paytmmp://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with Paytm">
+                    <a className="upi-app-pill" href={`paytmmp://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('Dear Misu Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with Paytm">
                       <img src="/images/upi/paytm.webp" alt="Paytm" className="upi-app-logo-img" width={40} height={40} loading="eager" />
                       <span>Paytm</span>
                     </a>
 
                     {/* CRED */}
-                    <a className="upi-app-pill" href={`credpay://upi/pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with CRED">
+                    <a className="upi-app-pill" href={`credpay://upi/pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('Dear Misu Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with CRED">
                       <img src="/images/upi/cred.webp" alt="CRED" className="upi-app-logo-img" width={40} height={40} loading="eager" />
                       <span>CRED</span>
                     </a>
 
                     {/* Amazon Pay */}
-                    <a className="upi-app-pill" href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}&app=amazon`} title="Pay with Amazon Pay">
+                    <a className="upi-app-pill" href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('Dear Misu Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}&app=amazon`} title="Pay with Amazon Pay">
                       <img src="/images/upi/amazonpay.webp" alt="Amazon Pay" className="upi-app-logo-img" width={40} height={40} loading="eager" />
                       <span>Amazon</span>
                     </a>
 
                     {/* BHIM UPI */}
-                    <a className="upi-app-pill" href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('TiraMio Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with BHIM or any UPI bank app">
+                    <a className="upi-app-pill" href={`upi://pay?pa=${encodeURIComponent(merchantUpi)}&pn=${encodeURIComponent('Dear Misu Tiramisu')}&am=${total}&cu=INR&tn=${encodeURIComponent('Order ' + currentOrderRef)}`} title="Pay with BHIM or any UPI bank app">
                       <img src="/images/upi/bhim.webp" alt="BHIM UPI" className="upi-app-logo-img" width={40} height={40} loading="eager" />
                       <span>BHIM / Other</span>
                     </a>
@@ -1077,7 +1077,7 @@ export default function Storefront() {
                     setCheckoutStep('details');
                   }}
                 >
-                  Done, Enjoy Your TiraMio!
+                  Done, Enjoy Your Dear Misu!
                 </button>
               </div>
             </div>
@@ -1090,15 +1090,15 @@ export default function Storefront() {
       {modal === 'qr' && <Modal onClose={close} className="qr-order-modal" showHeader={false}>
         <div className="qr-order-layout">
           <div className="qr-order-panel">
-            <div className="eyebrow left">THE FASTEST WAY TO TIRAMIO <span className="eyebrow-line" /></div>
+            <div className="eyebrow left">THE FASTEST WAY TO DEAR MISU <span className="eyebrow-line" /></div>
             <h2>Scan. Order. <em>Smile.</em></h2>
             <div className="qr-code-decoration">
               <span className="qr-ray qr-ray-left" aria-hidden="true" />
-              <div className="qr-code-frame"><img src="/images/order-qr.png" alt="Scan to start a TiraMio WhatsApp order" /></div>
+              <div className="qr-code-frame"><img src="/images/order-qr.png" alt="Scan to start a Dear Misu WhatsApp order" /></div>
               <span className="qr-ray qr-ray-right" aria-hidden="true" />
             </div>
             <p className="qr-caption">Point your camera here to start a WhatsApp order.</p>
-            <a className="qr-whatsapp-cta" href={`https://wa.me/${whatsapp}?text=Hi%20TiraMio!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer"><span className="whatsapp-mark"><MessageCircle /><Phone /></span> Open WhatsApp <ArrowUpRight size={17} /></a>
+            <a className="qr-whatsapp-cta" href={`https://wa.me/${whatsapp}?text=Hi%20Dear%20Misu!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer"><span className="whatsapp-mark"><MessageCircle /><Phone /></span> Open WhatsApp <ArrowUpRight size={17} /></a>
             <div className="qr-phone"><span /><Phone size={15} /><a href={`tel:${whatsapp}`}>8433198122</a><span /></div>
           </div>
         </div>
@@ -1155,7 +1155,7 @@ function ExperienceSection() {
 
         <div className="experience-content">
           <Reveal className="experience-intro">
-            <div className="eyebrow left">THE TIRAMIO FEELING <span className="eyebrow-line" /></div>
+            <div className="eyebrow left">THE DEAR MISU FEELING <span className="eyebrow-line" /></div>
             <h2>A little joy, <em>layer by layer.</em></h2>
             <p>For the coffee lover. For the sweet tooth. For the “just one more spoon” person.</p>
           </Reveal>
@@ -1186,7 +1186,7 @@ function TrackingSection({ onTrackOrder, tracking }) {
       <div className="experience-layout experience-tracking-layout">
         <section className="experience-tracking" id="track" aria-labelledby="experience-tracking-title">
           <div className="experience-tracking-copy">
-            <h3 id="experience-tracking-title">Where’s my <em>TiraMio?</em></h3>
+            <h3 id="experience-tracking-title">Where’s my <em>Dear Misu?</em></h3>
             <p>Have an order reference? Follow your order from confirmation to the first spoonful.</p>
             <button className="experience-tracking-button" onClick={onTrackOrder}>
               Track my order <ArrowUpRight size={17} />
