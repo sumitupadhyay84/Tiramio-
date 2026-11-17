@@ -5447,7 +5447,7 @@ button {
 }
 
 .listing-price-line {
-  align-items: center;
+  align-items: baseline;
   gap: 9px;
 }
 
@@ -6222,6 +6222,20 @@ main {
   white-space: normal;
 }
 
+.cart-modal .empty-cart-browse {
+  min-height: 36px;
+  margin-top: 2px;
+  padding: 0 14px;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 11px rgba(133, 82, 19, 0.16);
+}
+
+.cart-modal .empty-cart-browse:hover {
+  transform: translateY(-1px);
+}
+
 .cart-modal .cart-lines {
   max-height: 170px;
   margin-bottom: 12px;
@@ -6263,7 +6277,25 @@ main {
   margin-top: auto;
 }
 
-.cart-modal .cart-summary {
+.cart-modal .cart-pop-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(164, 91, 38, 0.24);
+  border-radius: 12px;
+  background: #fff3e2;
+  color: #7d351d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cart-pop-notice svg {
+  flex: 0 0 auto;
+}
+
+.cart-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6337,7 +6369,25 @@ main {
     white-space: normal;
   }
 
-  .cart-modal .cart-summary {
+  .cart-modal .cart-pop-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(164, 91, 38, 0.24);
+  border-radius: 12px;
+  background: #fff3e2;
+  color: #7d351d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cart-pop-notice svg {
+  flex: 0 0 auto;
+}
+
+.cart-summary {
     max-width: none;
   }
 }
@@ -7338,6 +7388,10 @@ main + .section-curve-divider {
   }
 
   .story-card-backdrop {
+    display: none;
+  }
+
+  .story-card-backdrop {
     inset: 12px 0 -12px 10px;
   }
 
@@ -7510,5 +7564,25 @@ main + .section-curve-divider {
 
   .menu-section .section-heading h2::after {
     background: #e8b96f;
+  }
+}
+
+/* QR order modal without the decorative dessert image panel */
+.qr-order-layout {
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.qr-order-panel {
+  border-radius: 0;
+  margin-left: 0;
+  padding: 38px 30px 25px;
+}
+
+@media (max-width: 620px) {
+  .qr-order-panel {
+    border-radius: 0;
+    margin: 0;
+    padding: 38px 22px 22px;
   }
 }
