@@ -4,7 +4,7 @@ export const metadata = {
   title: 'Dear Misu Tiramisu | Layers of Love, in Every Bite',
   description: 'A little box of happiness. Explore Dear Misu Mini, Classic and Share Box tiramisu and order directly on WhatsApp.',
   applicationName: 'Dear Misu Tiramisu',
-  icons: { icon: '/images/dear-misu-logo.png', apple: '/images/dear-misu-logo.png' },
+  icons: { icon: '/images/dear-misu-badge.webp', apple: '/images/dear-misu-badge.webp' },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com'),
   openGraph: {
     title: 'Dear Misu Tiramisu',
