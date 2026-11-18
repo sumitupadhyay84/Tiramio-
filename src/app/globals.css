@@ -6439,13 +6439,14 @@ main {
 .experience-photo {
   position: relative;
   isolation: isolate;
-  height: clamp(460px, 36vw, 570px);
+  height: clamp(520px, 44vw, 680px);
   min-width: 0;
   margin: 0;
   padding: 3px;
   border: 1px solid #d6a04e;
   border-radius: 46% 35% 44% 38% / 25% 35% 31% 42%;
   background: #d6a04e;
+  align-self: center;
 }
 
 .experience-photo-shadow {
@@ -6542,23 +6543,31 @@ main {
   line-height: 1.5;
 }
 
+.experience-tracking-wrap {
+  width: 100%;
+  margin-top: 36px;
+}
+
 .experience-tracking {
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 0.84fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
   align-items: center;
-  gap: 30px;
-  min-height: 205px;
-  padding: 26px 34px;
-  border-radius: 30px;
+  gap: 28px;
+  min-height: 175px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 24px 32px;
+  border-radius: 26px;
   color: #fff9f0;
   background:
-    radial-gradient(ellipse at 86% 130%, rgba(126, 67, 37, 0.3), transparent 38%),
-    radial-gradient(ellipse at 5% 0%, rgba(126, 67, 37, 0.2), transparent 42%),
+    radial-gradient(ellipse at 86% 130%, rgba(126, 67, 37, 0.35), transparent 42%),
+    radial-gradient(ellipse at 5% 0%, rgba(126, 67, 37, 0.22), transparent 44%),
     #35190f;
   overflow: hidden;
   scroll-margin-top: 100px;
+  box-shadow: 0 16px 40px rgba(36, 17, 8, 0.12);
 }
 
 .experience-tracking::before,

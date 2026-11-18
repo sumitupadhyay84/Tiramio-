@@ -715,8 +715,7 @@ export default function Storefront() {
           </div>
         </section>
         <WaveDivider variant="to-light" bg="#241108" fill="var(--paper)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
-        <ExperienceSection />
-        <TrackingSection onTrackOrder={() => open('track')} tracking={tracking} />
+        <ExperienceSection onTrackOrder={() => open('track')} tracking={tracking} />
         <CurveDivider />
         <section className="scan-section" id="scan"><div className="section-wrap"><Reveal className="scan-card"><div className="scan-copy"><div className="eyebrow left">QUICK AS A SCAN <span className="eyebrow-line" /></div><h2>Craving? <em>Scan.</em><br />Order. Smile.</h2><p>Scan to open a WhatsApp chat with Dear Misu. No long forms, no fuss — just your next favourite dessert.</p><a className="underlined-link" href={`https://wa.me/${whatsapp}?text=Hi%20Dear%20Misu!%20I%27d%20like%20to%20order%20tiramisu.`} target="_blank" rel="noreferrer">Chat with us <ArrowUpRight size={15} /></a></div><div className="scan-code-wrap"><div className="scan-qr-frame"><img src="/images/order-qr.png" alt="QR code to order Dear Misu on WhatsApp" width={470} height={470} loading="lazy" /></div><span>SCAN TO ORDER</span><small>WhatsApp · 8433198122</small></div></Reveal></div></section>
         <WaveDivider variant="to-dark" bg="var(--paper)" fill="var(--espresso)" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
@@ -1134,7 +1133,12 @@ const trackingStageByStatus = {
   delivered: 3
 };
 
-function ExperienceSection() {
+function ExperienceSection({ onTrackOrder, tracking }) {
+  const activeStage = tracking ? trackingStageByStatus[tracking.status] ?? -1 : -1;
+  const timelineLabel = tracking
+    ? `Current order status: ${String(tracking.status).replaceAll('_', ' ')}. Stages: ${trackingStages.join(', ')}.`
+    : `Order stages: ${trackingStages.join(', ')}. Track an order to see its current status.`;
+
   return (
     <section className="experience-section" id="moments">
       <div className="experience-layout">
@@ -1166,42 +1170,31 @@ function ExperienceSection() {
               </Reveal>
             ))}
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
-function TrackingSection({ onTrackOrder, tracking }) {
-  const activeStage = tracking ? trackingStageByStatus[tracking.status] ?? -1 : -1;
-  const timelineLabel = tracking
-    ? `Current order status: ${String(tracking.status).replaceAll('_', ' ')}. Stages: ${trackingStages.join(', ')}.`
-    : `Order stages: ${trackingStages.join(', ')}. Track an order to see its current status.`;
-
-  return (
-    <section className="experience-tracking-section" aria-label="Order tracking">
-      <div className="experience-layout experience-tracking-layout">
-        <section className="experience-tracking" id="track" aria-labelledby="experience-tracking-title">
-          <div className="experience-tracking-copy">
-            <h3 id="experience-tracking-title">Where’s my <em>Dear Misu?</em></h3>
-            <p>Have an order reference? Follow your order from confirmation to the first spoonful.</p>
-            <button className="experience-tracking-button" onClick={onTrackOrder}>
-              Track my order <ArrowUpRight size={17} />
-            </button>
-          </div>
-          <div className="experience-timeline" role="img" aria-label={timelineLabel}>
-            <div className="experience-timeline-line" aria-hidden="true" />
-            {trackingStages.map((stage, index) => (
-              <div className="experience-timeline-stage" key={stage}>
-                <span
-                  className={`experience-timeline-dot${index === activeStage ? ' is-active' : index < activeStage ? ' is-complete' : ''}`}
-                  aria-hidden="true"
-                />
-                <span>{stage}</span>
+          <Reveal className="experience-tracking-wrap" delay={0.1}>
+            <div className="experience-tracking" id="track" aria-labelledby="experience-tracking-title">
+              <div className="experience-tracking-copy">
+                <h3 id="experience-tracking-title">Where’s my <em>Dear Misu?</em></h3>
+                <p>Have an order reference? Follow your order from confirmation to the first spoonful.</p>
+                <button className="experience-tracking-button" onClick={onTrackOrder}>
+                  Track my order <ArrowUpRight size={17} />
+                </button>
               </div>
-            ))}
-          </div>
-        </section>
+              <div className="experience-timeline" role="img" aria-label={timelineLabel}>
+                <div className="experience-timeline-line" aria-hidden="true" />
+                {trackingStages.map((stage, index) => (
+                  <div className="experience-timeline-stage" key={stage}>
+                    <span
+                      className={`experience-timeline-dot${index === activeStage ? ' is-active' : index < activeStage ? ' is-complete' : ''}`}
+                      aria-hidden="true"
+                    />
+                    <span>{stage}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        </div>
       </div>
     </section>
   );
