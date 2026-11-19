@@ -107,3 +107,54 @@ ON CONFLICT (slug) DO UPDATE SET
   image_url = EXCLUDED.image_url,
   sort_order = EXCLUDED.sort_order,
   updated_at = now();
+
+
+-- ============================================================
+-- Customer Reviews
+-- ============================================================
+DO $$ BEGIN
+  CREATE TYPE review_status AS ENUM ('PENDING','APPROVED','REJECTED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE TABLE IF NOT EXISTS customer_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_name TEXT NOT NULL,
+  customer_email TEXT,
+  product_name TEXT NOT NULL,
+  overall_rating SMALLINT NOT NULL CHECK (overall_rating BETWEEN 1 AND 5),
+  taste_rating SMALLINT CHECK (taste_rating BETWEEN 1 AND 5),
+  creaminess_rating SMALLINT CHECK (creaminess_rating BETWEEN 1 AND 5),
+  coffee_intensity_rating SMALLINT CHECK (coffee_intensity_rating BETWEEN 1 AND 5),
+  sweetness_rating SMALLINT CHECK (sweetness_rating BETWEEN 1 AND 5),
+  texture_rating SMALLINT CHECK (texture_rating BETWEEN 1 AND 5),
+  chocolate_rating SMALLINT CHECK (chocolate_rating BETWEEN 1 AND 5),
+  presentation_rating SMALLINT CHECK (presentation_rating BETWEEN 1 AND 5),
+  sweetness_preference TEXT CHECK (sweetness_preference IN ('Too sweet','Just right','Less sweet')),
+  coffee_preference TEXT CHECK (coffee_preference IN ('Mild','Balanced','Strong')),
+  texture_preference TEXT CHECK (texture_preference IN ('Extra creamy','Soft and fluffy','Rich and layered','Perfectly balanced')),
+  feedback_tags TEXT[] DEFAULT '{}',
+  comment TEXT NOT NULL CHECK (char_length(comment) BETWEEN 10 AND 1000),
+  customer_image_url TEXT,
+  recommendation TEXT CHECK (recommendation IN ('Definitely!','Maybe','Not this time')),
+  status review_status NOT NULL DEFAULT 'PENDING',
+  verified_purchase BOOLEAN NOT NULL DEFAULT FALSE,
+  helpful_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  moderated_at TIMESTAMPTZ,
+  moderated_by TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_status ON customer_reviews(status);
+CREATE INDEX IF NOT EXISTS idx_reviews_product ON customer_reviews(product_name);
+CREATE INDEX IF NOT EXISTS idx_reviews_rating ON customer_reviews(overall_rating);
+CREATE INDEX IF NOT EXISTS idx_reviews_created ON customer_reviews(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_status_created ON customer_reviews(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS review_helpful_votes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  review_id UUID NOT NULL REFERENCES customer_reviews(id) ON DELETE CASCADE,
+  voter_ip_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(review_id, voter_ip_hash)
+);

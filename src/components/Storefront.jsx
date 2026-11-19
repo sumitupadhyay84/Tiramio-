@@ -8,6 +8,7 @@ import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { AlertCircle, ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
+import CustomerReviews from './CustomerReviews';
 
 const productVisual = '/images/cocoa-dusted-tiramisu.webp';
 const productImages = {
@@ -215,6 +216,7 @@ export default function Storefront() {
     '/': '#top',
     '/menu': '#menu',
     '/story': '#story',
+    '/reviews': '#reviews',
     '/track': '#track',
     '/order-smile': '#scan',
     '/scan': '#scan',
@@ -224,6 +226,7 @@ export default function Storefront() {
     '#top': '/',
     '#menu': '/menu',
     '#story': '/story',
+    '#reviews': '/reviews',
     '#track': '/track',
     '#scan': '/order-smile',
     '#order-smile': '/order-smile',
@@ -240,6 +243,9 @@ export default function Storefront() {
     if (selector === '#story') {
       // Pinpoint story inner content to completely clear top divider flourishes
       return el.querySelector('.story-inner') || el;
+    }
+    if (selector === '#reviews') {
+      return el.querySelector('.rev-section-inner') || el;
     }
     if (selector === '#track') {
       // Pinpoint tracking card container
@@ -496,6 +502,7 @@ export default function Storefront() {
         <nav className="desktop-nav">
           <a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a>
           <a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a>
+          <a href="/reviews" onClick={e => navigateToRoute(e, '/reviews')}>Customer Love</a>
           <a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a>
           <a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a>
         </nav>
@@ -505,8 +512,10 @@ export default function Storefront() {
         <nav className="mobile-nav open">
           <a onClick={e => navigateToRoute(e, '/menu')} href="/menu">Our Menu</a>
           <a onClick={e => navigateToRoute(e, '/story')} href="/story">Our Story</a>
+          <a onClick={e => navigateToRoute(e, '/reviews')} href="/reviews">Customer Love</a>
           <a onClick={e => navigateToRoute(e, '/track')} href="/track">Track Order</a>
           <a onClick={e => navigateToRoute(e, '/order-smile')} href="/order-smile">Order Smile</a>
+          <a href="/review" style={{ color: 'var(--gold)' }}>Share Your Review ♡</a>
         </nav>
       )}
       <main>
@@ -597,6 +606,7 @@ export default function Storefront() {
             ))}</div>
           </div>
         </section>
+        <CustomerReviews />
         <WaveDivider variant="to-dark" bg="var(--paper)" fill="#241108" underFill="rgba(198, 163, 106, 0.22)" stroke="rgba(214, 173, 112, 0.55)" />
         <section className="story-section" id="story">
           <div className="story-corner-flourish story-flourish-tl" aria-hidden="true">
@@ -735,7 +745,7 @@ export default function Storefront() {
             </div>
           </div>
           <div className="footer-links">
-            <div><b>EXPLORE</b><a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a><a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a><a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a><a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a></div>
+            <div><b>EXPLORE</b><a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a><a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a><a href="/reviews" onClick={e => navigateToRoute(e, '/reviews')}>Customer Love</a><a href="/review">Leave a Review</a><a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a><a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a></div>
             <div><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span></div>
           </div>
         </div>
@@ -1062,6 +1072,14 @@ export default function Storefront() {
                 <div className="summary-item"><span>Customer</span><strong>{form.name} ({form.phone})</strong></div>
                 <div className="summary-item"><span>Fulfilment</span><strong>{form.fulfilment}</strong></div>
                 <div className="summary-item"><span>Total Paid</span><strong>{money(total)}</strong></div>
+              </div>
+
+              <div className="confirmed-review-callout">
+                <span>♡ Loved your experience?</span>
+                <p>After your first spoonful, share your taste feedback with us!</p>
+                <a href="/review" className="button button-light" style={{ width: '100%', minHeight: '42px', fontSize: '12px' }}>
+                  Leave a Review Later <ArrowUpRight size={14} />
+                </a>
               </div>
 
               <div className="confirmed-footer-actions">
