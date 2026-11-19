@@ -3,7 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const crypto = require('node:crypto');
+const path = require('node:path');
+const fs = require('node:fs');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 const { z } = require('zod');
 const { pool } = require('./db');
 
@@ -31,6 +34,136 @@ const orderSchema = z.object({
 
 const toPaise = rupees => Math.round(Number(rupees) * 100);
 const asyncRoute = handler => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
+const sanitize = str => String(str || '').replace(/<[^>]*>/g, '').trim();
+
+/* ---------- Multer (review image uploads) ---------- */
+const uploadDir = path.join(process.env.VERCEL ? '/tmp' : __dirname, '..', 'uploads', 'reviews');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => cb(null, `${crypto.randomUUID()}-${Date.now()}${path.extname(file.originalname)}`)
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
+
+/* ---------- Admin session tokens ---------- */
+// Generate HMAC-signed session tokens instead of returning the raw secret.
+// Token format: timestamp.signature  (signature = HMAC-SHA256(secret, timestamp+username))
+const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
+const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+function createAdminToken(username) {
+  const secret = process.env.ADMIN_STATUS_SECRET || '';
+  const ts = Date.now().toString(36);
+  const payload = `${ts}.${username}`;
+  const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+  return `${payload}.${sig}`;
+}
+
+function verifyAdminToken(token) {
+  const secret = process.env.ADMIN_STATUS_SECRET || '';
+  if (!secret || !token) return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  const [ts, username, sig] = parts;
+  const payload = `${ts}.${username}`;
+  const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+  // Timing-safe comparison of signatures
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  if (!crypto.timingSafeEqual(a, b)) return false;
+  // Check expiration
+  const issuedAt = parseInt(ts, 36);
+  if (Date.now() - issuedAt > ADMIN_SESSION_MAX_AGE_MS) return false;
+  return true;
+}
+
+/* ---------- Reusable admin auth ---------- */
+function requireAdmin(req, res) {
+  const authHeader = req.get('authorization') || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const supplied = req.get('x-admin-status-secret') || bearerToken || '';
+
+  // Accept either a session token (new) or the raw secret (backward-compat for existing admin APIs)
+  if (supplied && verifyAdminToken(supplied)) return true;
+
+  const expected = process.env.ADMIN_STATUS_SECRET || '';
+  const a = Buffer.from(supplied); const b = Buffer.from(expected);
+  if (expected && a.length === b.length && crypto.timingSafeEqual(a, b)) return true;
+
+  res.status(401).json({ message: 'Unauthorized. Admin privileges required.' });
+  return false;
+}
+
+/* ---------- Login rate limiter (brute-force protection) ---------- */
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60_000, // 15 minutes
+  limit: 7,              // max 7 attempts per window
+  message: { success: false, message: 'Too many login attempts. Please wait 15 minutes before trying again.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.connection?.remoteAddress || 'unknown'
+});
+
+/* ---------- ADMIN: POST /api/admin/login ---------- */
+app.post('/api/admin/login', loginLimiter, (req, res) => {
+  const body = req.body || {};
+  const secretKey = (body.secretKey || body.password || body.secret || '').trim();
+  const username = (body.username || 'admin').trim().toLowerCase();
+  const expected = process.env.ADMIN_STATUS_SECRET || '';
+
+  // Generic error message – don't reveal which field was wrong
+  const denyMsg = 'Invalid administrative credentials. Access denied.';
+
+  if (!secretKey || !username) {
+    return res.status(401).json({ success: false, message: denyMsg });
+  }
+
+  if (username !== ADMIN_USERNAME) {
+    return res.status(401).json({ success: false, message: denyMsg });
+  }
+
+  const a = Buffer.from(secretKey);
+  const b = Buffer.from(expected);
+  if (!expected || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(401).json({ success: false, message: denyMsg });
+  }
+
+  // Issue a signed session token (NOT the raw secret)
+  const token = createAdminToken(username);
+
+  res.json({
+    success: true,
+    token,
+    expiresIn: ADMIN_SESSION_MAX_AGE_MS,
+    admin: {
+      username,
+      role: 'administrator',
+      authenticatedAt: new Date().toISOString()
+    }
+  });
+});
+
+/* ---------- ADMIN: GET /api/admin/verify ---------- */
+app.get('/api/admin/verify', (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  res.json({
+    authenticated: true,
+    role: 'administrator',
+    user: 'admin',
+    verifiedAt: new Date().toISOString()
+  });
+});
+
+/* ---------- Review rate limiter ---------- */
+const reviewLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 3, message: { message: 'Too many reviews submitted. Please try again later.' }, standardHeaders: 'draft-7', legacyHeaders: false });
 
 /**
  * Generate a sequential order reference like DEAR-0001, DEAR-0002, etc.
@@ -168,6 +301,283 @@ app.patch('/api/admin/orders/:orderRef/status', asyncRoute(async (req, res) => {
     res.json({ orderRef: rows[0].order_ref, status: rows[0].status });
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
+}));
+
+/* ================================================================
+ *  CUSTOMER REVIEWS
+ * ================================================================ */
+
+const reviewSchema = z.object({
+  customerName: z.string().trim().min(2).max(80),
+  customerEmail: z.string().email().optional().or(z.literal('')),
+  productName: z.enum(['Dear Misu Mini (100g)', 'Dear Misu Classic (200g)', 'Dear Misu Share Box (300g)']),
+  overallRating: z.coerce.number().int().min(1).max(5),
+  tasteRating: z.coerce.number().int().min(1).max(5).optional(),
+  creaminessRating: z.coerce.number().int().min(1).max(5).optional(),
+  coffeeIntensityRating: z.coerce.number().int().min(1).max(5).optional(),
+  sweetnessRating: z.coerce.number().int().min(1).max(5).optional(),
+  textureRating: z.coerce.number().int().min(1).max(5).optional(),
+  chocolateRating: z.coerce.number().int().min(1).max(5).optional(),
+  presentationRating: z.coerce.number().int().min(1).max(5).optional(),
+  sweetnessPreference: z.enum(['Too sweet', 'Just right', 'Less sweet']).optional(),
+  coffeePreference: z.enum(['Mild', 'Balanced', 'Strong']).optional(),
+  texturePreference: z.enum(['Extra creamy', 'Soft and fluffy', 'Rich and layered', 'Perfectly balanced']).optional(),
+  feedbackTags: z.array(z.string().max(50)).max(10).optional().default([]),
+  comment: z.string().trim().min(10).max(1000),
+  recommendation: z.enum(['Definitely!', 'Maybe', 'Not this time']).optional(),
+  honeypot: z.string().max(0).optional()
+});
+
+/* ---------- POST /api/reviews – Submit a review ---------- */
+app.post('/api/reviews', reviewLimiter, upload.single('image'), asyncRoute(async (req, res) => {
+  const body = { ...req.body };
+  if (typeof body.feedbackTags === 'string') {
+    try { body.feedbackTags = JSON.parse(body.feedbackTags); } catch { body.feedbackTags = []; }
+  }
+  const parsed = reviewSchema.safeParse(body);
+  if (!parsed.success) return res.status(400).json({ message: 'Please check the review details.', errors: parsed.error.flatten() });
+  const data = parsed.data;
+
+  // Honeypot spam trap – silently accept
+  if (data.honeypot) return res.status(200).json({ message: 'Thank you for your review!' });
+
+  const customerName = sanitize(data.customerName);
+  const comment = sanitize(data.comment);
+  const imageUrl = req.file ? `/api/review-images/${req.file.filename}` : null;
+
+  const { rows } = await pool.query(
+    `INSERT INTO customer_reviews
+       (customer_name, customer_email, product_name, overall_rating,
+        taste_rating, creaminess_rating, coffee_intensity_rating, sweetness_rating,
+        texture_rating, chocolate_rating, presentation_rating,
+        sweetness_preference, coffee_preference, texture_preference,
+        feedback_tags, comment, customer_image_url, recommendation)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+     RETURNING id`,
+    [
+      customerName, data.customerEmail || null, data.productName, data.overallRating,
+      data.tasteRating || null, data.creaminessRating || null, data.coffeeIntensityRating || null, data.sweetnessRating || null,
+      data.textureRating || null, data.chocolateRating || null, data.presentationRating || null,
+      data.sweetnessPreference || null, data.coffeePreference || null, data.texturePreference || null,
+      data.feedbackTags, comment, imageUrl, data.recommendation || null
+    ]
+  );
+  res.status(201).json({ message: 'Thank you for your review! It will appear after moderation.', reviewId: rows[0].id });
+}));
+
+/* ---------- GET /api/reviews – Public approved reviews ---------- */
+app.get('/api/reviews', asyncRoute(async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 6));
+  const offset = (page - 1) * limit;
+
+  const conditions = ["status = 'APPROVED'"];
+  const params = [];
+  let idx = 1;
+
+  if (req.query.product) { conditions.push(`product_name = $${idx++}`); params.push(req.query.product); }
+  if (req.query.rating) { conditions.push(`overall_rating = $${idx++}`); params.push(parseInt(req.query.rating, 10)); }
+
+  const sortMap = { oldest: 'created_at ASC', newest: 'created_at DESC', highest: 'overall_rating DESC, created_at ASC', lowest: 'overall_rating ASC, created_at ASC', helpful: 'helpful_count DESC, created_at ASC' };
+  const orderBy = sortMap[req.query.sort] || sortMap.oldest;
+
+  const where = conditions.join(' AND ');
+  const countResult = await pool.query(`SELECT COUNT(*) FROM customer_reviews WHERE ${where}`, params);
+  const total = parseInt(countResult.rows[0].count, 10);
+
+  const { rows } = await pool.query(
+    `SELECT id, customer_name, product_name, overall_rating,
+            taste_rating, creaminess_rating, coffee_intensity_rating, sweetness_rating,
+            texture_rating, chocolate_rating, presentation_rating,
+            sweetness_preference, coffee_preference, texture_preference,
+            feedback_tags, comment, customer_image_url, recommendation,
+            verified_purchase, helpful_count, created_at
+     FROM customer_reviews WHERE ${where}
+     ORDER BY ${orderBy} LIMIT $${idx++} OFFSET $${idx++}`,
+    [...params, limit, offset]
+  );
+
+  res.json({ reviews: rows, total, page, totalPages: Math.ceil(total / limit) });
+}));
+
+/* ---------- GET /api/reviews/stats – Public stats ---------- */
+app.get('/api/reviews/stats', asyncRoute(async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total,
+       COALESCE(ROUND(AVG(overall_rating), 2), 0) AS avg_rating,
+       COUNT(*) FILTER (WHERE overall_rating = 5)::int AS stars_5,
+       COUNT(*) FILTER (WHERE overall_rating = 4)::int AS stars_4,
+       COUNT(*) FILTER (WHERE overall_rating = 3)::int AS stars_3,
+       COUNT(*) FILTER (WHERE overall_rating = 2)::int AS stars_2,
+       COUNT(*) FILTER (WHERE overall_rating = 1)::int AS stars_1,
+       COUNT(*) FILTER (WHERE recommendation = 'Definitely!')::int AS recommend_yes
+     FROM customer_reviews WHERE status = 'APPROVED'`
+  );
+  const s = rows[0];
+  const total = s.total || 0;
+  const pct = n => total ? Math.round((n / total) * 100) : 0;
+
+  const productAvg = await pool.query(
+    `SELECT product_name, ROUND(AVG(overall_rating), 2) AS avg_rating, COUNT(*)::int AS total
+     FROM customer_reviews WHERE status = 'APPROVED' GROUP BY product_name`
+  );
+
+  res.json({
+    averageRating: parseFloat(s.avg_rating),
+    totalReviews: total,
+    distribution: {
+      5: { count: s.stars_5, percentage: pct(s.stars_5) },
+      4: { count: s.stars_4, percentage: pct(s.stars_4) },
+      3: { count: s.stars_3, percentage: pct(s.stars_3) },
+      2: { count: s.stars_2, percentage: pct(s.stars_2) },
+      1: { count: s.stars_1, percentage: pct(s.stars_1) }
+    },
+    recommendationPercentage: pct(s.recommend_yes),
+    productAverages: productAvg.rows
+  });
+}));
+
+/* ---------- GET /api/reviews/:id – Single approved review ---------- */
+app.get('/api/reviews/:id', asyncRoute(async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, customer_name, product_name, overall_rating,
+            taste_rating, creaminess_rating, coffee_intensity_rating, sweetness_rating,
+            texture_rating, chocolate_rating, presentation_rating,
+            sweetness_preference, coffee_preference, texture_preference,
+            feedback_tags, comment, customer_image_url, recommendation,
+            verified_purchase, helpful_count, created_at
+     FROM customer_reviews WHERE id = $1 AND status = 'APPROVED'`,
+    [req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ message: 'Review not found.' });
+  res.json({ review: rows[0] });
+}));
+
+/* ---------- POST /api/reviews/:id/helpful – Vote helpful ---------- */
+app.post('/api/reviews/:id/helpful', asyncRoute(async (req, res) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const voterIpHash = crypto.createHash('sha256').update(ip).digest('hex');
+
+  const { rowCount } = await pool.query(
+    `INSERT INTO review_helpful_votes (review_id, voter_ip_hash)
+     VALUES ($1, $2) ON CONFLICT (review_id, voter_ip_hash) DO NOTHING`,
+    [req.params.id, voterIpHash]
+  );
+
+  if (rowCount > 0) {
+    await pool.query('UPDATE customer_reviews SET helpful_count = helpful_count + 1 WHERE id = $1', [req.params.id]);
+  }
+
+  res.json({ helpful: rowCount > 0 });
+}));
+
+/* ---------- GET /api/review-images/:filename – Serve image ---------- */
+app.get('/api/review-images/:filename', (req, res) => {
+  const filename = req.params.filename;
+  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    return res.status(400).json({ message: 'Invalid filename.' });
+  }
+  const filePath = path.join(uploadDir, filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Image not found.' });
+  res.sendFile(filePath);
+});
+
+/* ---------- ADMIN: GET /api/admin/reviews ---------- */
+app.get('/api/admin/reviews', asyncRoute(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const offset = (page - 1) * limit;
+
+  const conditions = [];
+  const params = [];
+  let idx = 1;
+
+  if (req.query.status) { conditions.push(`status = $${idx++}`); params.push(req.query.status); }
+  if (req.query.product) { conditions.push(`product_name = $${idx++}`); params.push(req.query.product); }
+  if (req.query.rating) { conditions.push(`overall_rating = $${idx++}`); params.push(parseInt(req.query.rating, 10)); }
+  if (req.query.search) {
+    conditions.push(`(customer_name ILIKE $${idx} OR comment ILIKE $${idx})`);
+    params.push(`%${req.query.search}%`);
+    idx++;
+  }
+
+  const sortMap = { oldest: 'created_at ASC', newest: 'created_at DESC', highest: 'overall_rating DESC, created_at ASC', lowest: 'overall_rating ASC, created_at ASC', helpful: 'helpful_count DESC, created_at ASC' };
+  const orderBy = sortMap[req.query.sort] || sortMap.oldest;
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const countResult = await pool.query(`SELECT COUNT(*) FROM customer_reviews ${where}`, params);
+  const total = parseInt(countResult.rows[0].count, 10);
+
+  const { rows } = await pool.query(
+    `SELECT * FROM customer_reviews ${where}
+     ORDER BY ${orderBy} LIMIT $${idx++} OFFSET $${idx++}`,
+    [...params, limit, offset]
+  );
+
+  res.json({ reviews: rows, total, page, totalPages: Math.ceil(total / limit) });
+}));
+
+/* ---------- ADMIN: GET /api/admin/reviews/stats ---------- */
+app.get('/api/admin/reviews/stats', asyncRoute(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
+  const { rows } = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total,
+       COUNT(*) FILTER (WHERE status = 'PENDING')::int AS pending,
+       COUNT(*) FILTER (WHERE status = 'APPROVED')::int AS approved,
+       COUNT(*) FILTER (WHERE status = 'REJECTED')::int AS rejected,
+       COALESCE(ROUND(AVG(overall_rating), 2), 0) AS avg_rating,
+       COUNT(*) FILTER (WHERE recommendation = 'Definitely!')::int AS recommend_yes
+     FROM customer_reviews`
+  );
+  const s = rows[0];
+  const total = s.total || 0;
+  res.json({
+    total,
+    pending: s.pending,
+    approved: s.approved,
+    rejected: s.rejected,
+    averageRating: parseFloat(s.avg_rating),
+    recommendationPercentage: total ? Math.round((s.recommend_yes / total) * 100) : 0
+  });
+}));
+
+/* ---------- ADMIN: PATCH /api/admin/reviews/:id/approve ---------- */
+app.patch('/api/admin/reviews/:id/approve', asyncRoute(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const moderatedBy = (req.body && req.body.moderatedBy) || 'admin';
+  const { rows } = await pool.query(
+    `UPDATE customer_reviews SET status = 'APPROVED', verified_purchase = true, moderated_at = now(), moderated_by = $2, updated_at = now()
+     WHERE id = $1 RETURNING *`,
+    [req.params.id, moderatedBy]
+  );
+  if (!rows.length) return res.status(404).json({ message: 'Review not found.' });
+  res.json({ review: rows[0] });
+}));
+
+/* ---------- ADMIN: PATCH /api/admin/reviews/:id/reject ---------- */
+app.patch('/api/admin/reviews/:id/reject', asyncRoute(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const moderatedBy = (req.body && req.body.moderatedBy) || 'admin';
+  const { rows } = await pool.query(
+    `UPDATE customer_reviews SET status = 'REJECTED', moderated_at = now(), moderated_by = $2, updated_at = now()
+     WHERE id = $1 RETURNING *`,
+    [req.params.id, moderatedBy]
+  );
+  if (!rows.length) return res.status(404).json({ message: 'Review not found.' });
+  res.json({ review: rows[0] });
+}));
+
+/* ---------- ADMIN: DELETE /api/admin/reviews/:id ---------- */
+app.delete('/api/admin/reviews/:id', asyncRoute(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const { rowCount } = await pool.query('DELETE FROM customer_reviews WHERE id = $1', [req.params.id]);
+  if (!rowCount) return res.status(404).json({ message: 'Review not found.' });
+  res.json({ deleted: true });
 }));
 
 app.use((err, req, res, next) => {
