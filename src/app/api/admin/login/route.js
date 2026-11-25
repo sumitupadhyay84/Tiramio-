@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { validateAdminCredentials, createAdminToken, checkLoginRateLimit, recordFailedLogin, resetLoginAttempts } from '@/lib/adminAuth';
+import { validateAdminCredentials, createAdminToken, checkLoginRateLimit, recordFailedLogin, resetLoginAttempts, getClientIp } from '@/lib/adminAuth';
 
 export async function POST(request) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'local';
+    const ip = getClientIp(request);
 
     // Rate-limiting check (max 7 attempts per 15 min)
     const rateCheck = checkLoginRateLimit(ip);

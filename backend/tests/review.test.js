@@ -1,270 +1,330 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const crypto = require('node:crypto');
-const { z } = require('zod');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 
-// 1. Review Schema Validation
-const reviewSchema = z.object({
-  customerName: z.string().trim().min(2).max(80),
-  customerEmail: z.string().email().optional().or(z.literal('')),
-  productName: z.enum(['Dear Misu Mini (100g)', 'Dear Misu Classic (200g)', 'Dear Misu Share Box (300g)']),
-  overallRating: z.coerce.number().int().min(1).max(5),
-  tasteRating: z.coerce.number().int().min(1).max(5).optional(),
-  creaminessRating: z.coerce.number().int().min(1).max(5).optional(),
-  coffeeIntensityRating: z.coerce.number().int().min(1).max(5).optional(),
-  sweetnessRating: z.coerce.number().int().min(1).max(5).optional(),
-  textureRating: z.coerce.number().int().min(1).max(5).optional(),
-  chocolateRating: z.coerce.number().int().min(1).max(5).optional(),
-  presentationRating: z.coerce.number().int().min(1).max(5).optional(),
-  sweetnessPreference: z.enum(['Too sweet', 'Just right', 'Less sweet']).optional(),
-  coffeePreference: z.enum(['Mild', 'Balanced', 'Strong']).optional(),
-  texturePreference: z.enum(['Extra creamy', 'Soft and fluffy', 'Rich and layered', 'Perfectly balanced']).optional(),
-  feedbackTags: z.array(z.string().max(50)).max(10).optional().default([]),
-  comment: z.string().trim().min(10).max(1000),
-  recommendation: z.enum(['Definitely!', 'Maybe', 'Not this time']).optional(),
-  honeypot: z.string().max(0).optional()
+let tempRoot;
+let originalCwd;
+let reviewsStore;
+let ordersStore;
+let adminAuth;
+
+test.before(async () => {
+  originalCwd = process.cwd();
+  tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'dearmisu-reviews-test-'));
+  fs.mkdirSync(path.join(tempRoot, 'data'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, 'data', 'reviews.json'), JSON.stringify([], null, 2));
+  fs.writeFileSync(path.join(tempRoot, 'data', 'orders.json'), JSON.stringify([], null, 2));
+
+  process.chdir(tempRoot);
+
+  const storefrontRoot = path.resolve(originalCwd, 'tiramio-storefront');
+  const altStorefrontRoot = path.resolve(originalCwd);
+  const baseDir = fs.existsSync(path.join(storefrontRoot, 'src', 'lib', 'reviewsStore.js'))
+    ? storefrontRoot
+    : altStorefrontRoot;
+
+  reviewsStore = await import(pathToFileURL(path.join(baseDir, 'src', 'lib', 'reviewsStore.js')).href);
+  ordersStore = await import(pathToFileURL(path.join(baseDir, 'src', 'lib', 'ordersStore.js')).href);
+  adminAuth = await import(pathToFileURL(path.join(baseDir, 'src', 'lib', 'adminAuth.js')).href);
 });
 
-const sanitize = str => String(str || '').replace(/<[^>]*>/g, '').trim();
+test.after(() => {
+  process.chdir(originalCwd);
+  if (tempRoot && fs.existsSync(tempRoot)) {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
 
-test('Customer Review Submission - Valid full submission', () => {
-  const input = {
-    customerName: 'Ananya Sharma',
-    customerEmail: 'ananya@example.com',
-    productName: 'Dear Misu Classic (200g)',
+test('Purchase Verification - Completed matching delivered order grants Verified Purchase', () => {
+  const order = ordersStore.createOrder({
+    orderRef: 'DEAR-2001',
+    customerName: 'Aarav Patel',
+    phone: '9876543210',
+    fulfilment: 'Delivery',
+    address: 'Indiranagar, Bangalore',
+    paymentId: 'UTR123456789',
+    items: [{ productId: 'classic', quantity: 1 }]
+  });
+  ordersStore.updateOrderStatus(order.order_ref, 'delivered', 'Delivered to customer');
+
+  const res = reviewsStore.createReview({
+    customerName: 'Aarav P.',
+    customerPhone: '9876543210',
+    customerEmail: 'aarav@example.com',
+    orderRef: 'DEAR-2001',
+    productName: 'Dear Misu Classic',
     overallRating: 5,
-    tasteRating: 5,
-    creaminessRating: 5,
-    coffeeIntensityRating: 4,
-    sweetnessPreference: 'Just right',
-    feedbackTags: ['Perfectly creamy', 'Rich coffee flavour'],
-    comment: 'The best tiramisu in the city! Every single spoonful felt completely heavenly.',
+    comment: 'Silky mascarpone and rich espresso layers, arrived fresh!'
+  });
+
+  assert.equal(res.verificationStatus, 'VERIFIED_PURCHASE');
+  assert.equal(res.review.purchase_verification_status, 'VERIFIED_PURCHASE');
+  assert.equal(res.review.verified_purchase, true);
+  // Private info never exposed in public review response
+  assert.equal('customer_email' in res.review, false);
+  assert.equal('customer_phone' in res.review, false);
+  assert.equal('verification_evidence' in res.review, false);
+  assert.ok(res.editToken);
+});
+
+test('Purchase Verification - Incomplete, cancelled, wrong-product, or mismatched customer order stays Unverified', () => {
+  // Incomplete (placed) order
+  ordersStore.createOrder({
+    orderRef: 'DEAR-2002',
+    customerName: 'Neha Rao',
+    phone: '9876500001',
+    fulfilment: 'Pickup',
+    items: [{ productId: 'mini', quantity: 1 }]
+  });
+
+  const pendingOrderRev = reviewsStore.createReview({
+    customerName: 'Neha R.',
+    customerPhone: '9876500001',
+    orderRef: 'DEAR-2002',
+    productName: 'Dear Misu Mini',
+    overallRating: 4,
+    comment: 'Excited to try, placed order today and waiting to taste!'
+  });
+  assert.equal(pendingOrderRev.verificationStatus, 'UNVERIFIED');
+
+  // Cancelled order does not qualify
+  ordersStore.updateOrderStatus('DEAR-2002', 'cancelled', 'Cancelled by user');
+  const cancelledRev = reviewsStore.createReview({
+    customerName: 'Neha R.',
+    customerPhone: '9876500001',
+    orderRef: 'DEAR-2002',
+    productName: 'Dear Misu Classic',
+    overallRating: 2,
+    comment: 'Tried submitting review for a cancelled order reference.'
+  });
+  assert.equal(cancelledRev.verificationStatus, 'UNVERIFIED');
+
+  // Wrong product against delivered DEAR-2001
+  const wrongProdRev = reviewsStore.createReview({
+    customerName: 'Aarav P.',
+    customerPhone: '9876543210',
+    orderRef: 'DEAR-2001',
+    productName: 'Dear Misu Share Box',
+    overallRating: 5,
+    comment: 'Trying to verify Share Box using a Classic order reference.'
+  });
+  assert.equal(wrongProdRev.verificationStatus, 'UNVERIFIED');
+
+  // Unrelated customer phone trying to spoof DEAR-2001
+  const unrelatedCustomerRev = reviewsStore.createReview({
+    customerName: 'Spoofer',
+    customerPhone: '9999999999',
+    orderRef: 'DEAR-2001',
+    productName: 'Dear Misu Classic',
+    overallRating: 1,
+    comment: 'Trying to guess order number without matching customer phone.'
+  });
+  assert.equal(unrelatedCustomerRev.verificationStatus, 'UNVERIFIED');
+});
+
+test('Duplicate Order Prevention - Blocks duplicate review for same delivered order + product', () => {
+  const dup = reviewsStore.createReview({
+    customerName: 'Aarav P.',
+    customerPhone: '9876543210',
+    orderRef: 'DEAR-2001',
+    productName: 'Dear Misu Classic',
+    overallRating: 4,
+    comment: 'Trying to submit a second review for the same order item.'
+  });
+  assert.equal(dup.code, 'DUPLICATE_ORDER_REVIEW');
+});
+
+test('Moderation Independence & Lifecycle - Approve never fakes Verified Purchase; Hide/Restore/Reject & negative reviews', () => {
+  // Negative unverified review must still be eligible for approval
+  const neg = reviewsStore.createReview({
+    customerName: 'Kiran',
+    productName: 'Dear Misu Mini',
+    overallRating: 2,
+    comment: 'Too bitter for my personal taste today, delivery was fine.'
+  });
+  assert.equal(neg.review.status, 'PENDING');
+  assert.equal(neg.verificationStatus, 'UNVERIFIED');
+
+  // Not visible publicly while PENDING
+  let pub = reviewsStore.getPublicReviews({ limit: 50 });
+  assert.equal(pub.reviews.some(r => r.id === neg.review.id), false);
+
+  // Approve -> becomes APPROVED, stays UNVERIFIED!
+  const approvedNeg = reviewsStore.moderateReview({
+    id: neg.review.id,
+    action: 'APPROVE',
+    adminId: 'admin@fitpulse.com',
+    reason: 'Genuine negative feedback approved'
+  });
+  assert.equal(approvedNeg.review.status, 'APPROVED');
+  assert.equal(approvedNeg.review.verified_purchase, false);
+  assert.equal(approvedNeg.review.purchase_verification_status, 'UNVERIFIED');
+
+  pub = reviewsStore.getPublicReviews({ limit: 50 });
+  assert.equal(pub.reviews.some(r => r.id === neg.review.id), true);
+
+  // Hide requires reason
+  const missingReason = reviewsStore.moderateReview({
+    id: neg.review.id,
+    action: 'HIDE',
+    adminId: 'admin@fitpulse.com',
+    reason: ''
+  });
+  assert.ok(missingReason.error);
+
+  // Hide with valid reason removes from public view
+  const hidden = reviewsStore.moderateReview({
+    id: neg.review.id,
+    action: 'HIDE',
+    adminId: 'admin@fitpulse.com',
+    reason: 'Temporary customer support follow-up'
+  });
+  assert.equal(hidden.review.status, 'HIDDEN');
+  pub = reviewsStore.getPublicReviews({ limit: 50 });
+  assert.equal(pub.reviews.some(r => r.id === neg.review.id), false);
+
+  // Restore makes visible again
+  const restored = reviewsStore.moderateReview({
+    id: neg.review.id,
+    action: 'RESTORE',
+    adminId: 'admin@fitpulse.com',
+    reason: 'Issue resolved with customer'
+  });
+  assert.equal(restored.review.status, 'APPROVED');
+  pub = reviewsStore.getPublicReviews({ limit: 50 });
+  assert.equal(pub.reviews.some(r => r.id === neg.review.id), true);
+});
+
+test('Review Integrity & Audit Trail - Customer edit preserves version history; admin deletion restricted', () => {
+  const created = reviewsStore.createReview({
+    customerName: 'Meera',
+    productName: 'Dear Misu Share Box',
+    overallRating: 4,
+    comment: 'Loved the texture and generous portion for our family gathering.'
+  });
+
+  // Customer edit with wrong token fails
+  const badEdit = reviewsStore.updateCustomerReview(created.review.id, 'wrong-token', {
+    overallRating: 5,
+    comment: 'Unauthorized edit attempt should be rejected cleanly.'
+  });
+  assert.equal(badEdit.statusCode, 403);
+
+  // Customer edit with valid token succeeds & stores version + audit log
+  const goodEdit = reviewsStore.updateCustomerReview(created.review.id, created.editToken, {
+    overallRating: 5,
+    comment: 'Updated after tasting chilled overnight — even better next day!'
+  });
+  assert.equal(goodEdit.review.overall_rating, 5);
+  assert.equal(goodEdit.review.status, 'PENDING');
+
+  const details = reviewsStore.getAdminReviewDetails(created.review.id);
+  assert.equal(details.versions.length, 2);
+  assert.equal(details.auditLogs.some(l => l.action === 'CUSTOMER_EDITED'), true);
+
+  // Admin delete requires valid category + reason
+  const invalidDel = reviewsStore.deleteReview(created.review.id, {
+    adminId: 'admin',
+    reasonCategory: 'i_dont_like_it',
+    reason: 'Negative'
+  });
+  assert.ok(invalidDel.error);
+});
+
+test('Public Stats, Filtering, and Helpful Voting - Accurate calculations & no duplicate votes', () => {
+  const order = ordersStore.createOrder({
+    orderRef: 'DEAR-2009',
+    customerName: 'Rohan',
+    phone: '9876511111',
+    fulfilment: 'Delivery',
+    address: 'Koramangala',
+    items: [{ productId: 'mini', quantity: 1 }]
+  });
+  ordersStore.updateOrderStatus(order.order_ref, 'delivered');
+
+  const vRev = reviewsStore.createReview({
+    customerName: 'Rohan',
+    customerPhone: '9876511111',
+    orderRef: 'DEAR-2009',
+    productName: 'Dear Misu Mini',
+    overallRating: 5,
     recommendation: 'Definitely!',
-    honeypot: ''
-  };
-  const result = reviewSchema.safeParse(input);
-  assert.equal(result.success, true);
-  assert.equal(result.data.customerName, 'Ananya Sharma');
-  assert.equal(result.data.overallRating, 5);
-});
-
-test('Customer Review Submission - Missing customer name fails', () => {
-  const input = {
-    customerName: '',
-    productName: 'Dear Misu Classic (200g)',
-    overallRating: 5,
-    comment: 'Delicious dessert, loved the coffee layers!'
-  };
-  const result = reviewSchema.safeParse(input);
-  assert.equal(result.success, false);
-});
-
-test('Customer Review Submission - Missing product fails', () => {
-  const input = {
-    customerName: 'Rahul',
-    productName: 'Invalid Cake',
-    overallRating: 5,
-    comment: 'Delicious dessert, loved the coffee layers!'
-  };
-  const result = reviewSchema.safeParse(input);
-  assert.equal(result.success, false);
-});
-
-test('Customer Review Submission - Missing or out of range overall rating fails', () => {
-  assert.equal(reviewSchema.safeParse({ customerName: 'Rahul', productName: 'Dear Misu Mini (100g)', comment: 'Great tiramisu!', overallRating: 0 }).success, false);
-  assert.equal(reviewSchema.safeParse({ customerName: 'Rahul', productName: 'Dear Misu Mini (100g)', comment: 'Great tiramisu!', overallRating: 6 }).success, false);
-  assert.equal(reviewSchema.safeParse({ customerName: 'Rahul', productName: 'Dear Misu Mini (100g)', comment: 'Great tiramisu!' }).success, false);
-});
-
-test('Customer Review Submission - Comment below 10 characters fails', () => {
-  const result = reviewSchema.safeParse({
-    customerName: 'Rohan',
-    productName: 'Dear Misu Mini (100g)',
-    overallRating: 4,
-    comment: 'Good'
+    comment: 'Fresh cocoa dusting and balanced sweetness, verified order!'
   });
-  assert.equal(result.success, false);
+  reviewsStore.moderateReview({ id: vRev.review.id, action: 'APPROVE', adminId: 'admin', reason: 'Valid review' });
+
+  // Verified filter returns only verified purchases
+  const verifiedOnly = reviewsStore.getPublicReviews({ verification: 'VERIFIED_PURCHASE' });
+  assert.ok(verifiedOnly.reviews.length >= 1);
+  assert.ok(verifiedOnly.reviews.every(r => r.purchase_verification_status === 'VERIFIED_PURCHASE'));
+
+  // Public stats reflects published reviews & real recommendation count
+  const stats = reviewsStore.getPublicStats();
+  assert.ok(stats.totalReviews >= 2);
+  assert.ok(stats.verifiedPurchaseCount >= 1);
+  assert.equal(stats.recommendationResponseCount, 1);
+  assert.equal(stats.recommendationPercentage, 100);
+
+  // Helpful vote increments once per voter hash and blocks duplicates
+  const firstVote = reviewsStore.upvoteReviewHelpful(vRev.review.id, 'voter-hash-1');
+  assert.equal(firstVote.voted, true);
+  assert.equal(firstVote.helpfulCount, 1);
+
+  const dupVote = reviewsStore.upvoteReviewHelpful(vRev.review.id, 'voter-hash-1');
+  assert.equal(dupVote.voted, false);
+  assert.equal(dupVote.duplicate, true);
+  assert.equal(dupVote.helpfulCount, 1);
 });
 
-test('Customer Review Submission - Comment above 1000 characters fails', () => {
-  const result = reviewSchema.safeParse({
-    customerName: 'Rohan',
-    productName: 'Dear Misu Mini (100g)',
-    overallRating: 4,
-    comment: 'a'.repeat(1001)
-  });
-  assert.equal(result.success, false);
+test('Admin Auth & Role Check - Token parsing enforces administrator role and rejects tampered tokens', () => {
+  const token = adminAuth.createAdminToken('admin@fitpulse.com');
+  const parsed = adminAuth.parseAdminToken(token);
+  assert.equal(parsed.authenticated, true);
+  assert.equal(parsed.role, 'administrator');
+  assert.equal(parsed.username, 'admin@fitpulse.com');
+
+  const tampered = token.slice(0, -4) + 'xxxx';
+  assert.equal(adminAuth.parseAdminToken(tampered), null);
 });
 
-test('Security - HTML sanitization strips malicious tags and scripts', () => {
-  const dirty = '<script>alert("xss")</script>Delicious <b>tiramisu</b> <img src="x" onerror="evil()"/>';
-  const clean = sanitize(dirty);
-  assert.equal(clean.includes('<script>'), false);
-  assert.equal(clean.includes('<b>'), false);
-  assert.equal(clean.includes('<img'), false);
-  assert.equal(clean, 'alert("xss")Delicious tiramisu');
-});
-
-test('Anti-Spam - Honeypot detection identifies bot fill', () => {
-  const input = {
-    customerName: 'SpamBot',
-    productName: 'Dear Misu Classic (200g)',
+test('Left-to-Right Date Ordering - Latest review approved first & earlier review approved later auto-adjusts by date', () => {
+  // Seed earlier review (17 Nov) and current review (25 Nov)
+  const earlier = reviewsStore.createReview({
+    customerName: 'Early Customer',
+    productName: 'Dear Misu Classic',
     overallRating: 5,
-    comment: 'Click this link to win money right now!',
-    honeypot: 'http://spam-link.com'
-  };
-  const result = reviewSchema.safeParse(input);
-  assert.equal(result.success, false, 'Honeypot length > 0 is rejected by schema');
-});
+    comment: 'Submitted earlier on 17 Nov before current review.'
+  });
+  const current = reviewsStore.createReview({
+    customerName: 'Current Customer',
+    productName: 'Dear Misu Classic',
+    overallRating: 5,
+    comment: 'Submitted later on 25 Nov and approved first.'
+  });
 
-test('Admin Auth - Timing-safe secret comparison validates correctly', () => {
-  const expectedSecret = 'dear-misu-super-secret-key-2026';
-  
-  function checkSecret(supplied) {
-    const a = Buffer.from(supplied || '');
-    const b = Buffer.from(expectedSecret);
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  // Assign distinct created_at timestamps in stored reviews to simulate 17 Nov vs 25 Nov
+  const file = path.join(tempRoot, 'data', 'reviews.json');
+  const rows = JSON.parse(fs.readFileSync(file, 'utf-8'));
+  const eRow = rows.find(r => r.id === earlier.review.id);
+  const cRow = rows.find(r => r.id === current.review.id);
+  eRow.created_at = '2026-11-17T10:00:00.000Z';
+  cRow.created_at = '2026-11-25T10:00:00.000Z';
+  fs.writeFileSync(file, JSON.stringify(rows, null, 2));
+
+  // Approve current (25 Nov) FIRST
+  reviewsStore.moderateReview({ id: current.review.id, action: 'APPROVE', adminId: 'admin', reason: 'Approved first' });
+  // Approve earlier (17 Nov) AFTER
+  reviewsStore.moderateReview({ id: earlier.review.id, action: 'APPROVE', adminId: 'admin', reason: 'Approved later' });
+
+  const pub = reviewsStore.getPublicReviews({ limit: 10, sort: 'chronological' });
+  const dates = pub.reviews.map(r => new Date(r.created_at).getTime());
+  for (let i = 1; i < dates.length; i++) {
+    assert.ok(dates[i - 1] <= dates[i], 'Public queue must be sorted earliest to latest left-to-right');
   }
-
-  assert.equal(checkSecret('dear-misu-super-secret-key-2026'), true);
-  assert.equal(checkSecret('wrong-secret'), false);
-  assert.equal(checkSecret(''), false);
-  assert.equal(checkSecret(null), false);
+  const idxEarly = pub.reviews.findIndex(r => r.id === earlier.review.id);
+  const idxCurrent = pub.reviews.findIndex(r => r.id === current.review.id);
+  assert.ok(idxEarly < idxCurrent, 'Earlier review (17 Nov) must automatically appear left of current review (25 Nov)');
 });
-
-test('Admin Auth - Bearer token and custom header parsing', () => {
-  const expectedSecret = 'dear-misu-super-secret-key-2026';
-
-  function verifyAdminAuth(headers) {
-    const authHeader = headers['authorization'] || '';
-    const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-    const supplied = headers['x-admin-status-secret'] || bearerToken || '';
-    const a = Buffer.from(supplied);
-    const b = Buffer.from(expectedSecret);
-    return expectedSecret.length > 0 && a.length === b.length && crypto.timingSafeEqual(a, b);
-  }
-
-  assert.equal(verifyAdminAuth({ 'x-admin-status-secret': 'dear-misu-super-secret-key-2026' }), true);
-  assert.equal(verifyAdminAuth({ 'authorization': 'Bearer dear-misu-super-secret-key-2026' }), true);
-  assert.equal(verifyAdminAuth({ 'authorization': 'Bearer invalid-token' }), false);
-  assert.equal(verifyAdminAuth({}), false);
-  assert.equal(verifyAdminAuth({ 'x-admin-status-secret': 'wrong' }), false);
-});
-
-test('Admin Login - Credential verification rejects invalid username or secret', () => {
-  const expectedSecret = 'dear-misu-super-secret-key-2026';
-
-  function authenticateAdmin(username, secretKey) {
-    const user = (username || 'admin').trim().toLowerCase();
-    if (username && user !== 'admin') return { success: false, reason: 'Invalid username' };
-    const a = Buffer.from((secretKey || '').trim());
-    const b = Buffer.from(expectedSecret);
-    if (!expectedSecret || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-      return { success: false, reason: 'Invalid secret' };
-    }
-    return { success: true, role: 'administrator' };
-  }
-
-  assert.equal(authenticateAdmin('admin', 'dear-misu-super-secret-key-2026').success, true);
-  assert.equal(authenticateAdmin('ADMIN', 'dear-misu-super-secret-key-2026').success, true);
-  assert.equal(authenticateAdmin('hacker', 'dear-misu-super-secret-key-2026').success, false);
-  assert.equal(authenticateAdmin('admin', 'wrong-password').success, false);
-  assert.equal(authenticateAdmin('admin', '').success, false);
-});
-
-test('Admin Auth - HMAC signed session token creation and verification', () => {
-  const secret = 'dear-misu-super-secret-key-2026';
-  const maxAgeMs = 12 * 60 * 60 * 1000;
-
-  function createToken(username, issuedOffset = 0) {
-    const ts = (Date.now() + issuedOffset).toString(36);
-    const payload = `${ts}.${username}`;
-    const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
-    return `${payload}.${sig}`;
-  }
-
-  function verifyToken(token) {
-    if (!token) return false;
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    const [ts, username, sig] = parts;
-    const payload = `${ts}.${username}`;
-    const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
-    const a = Buffer.from(sig);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
-    const issuedAt = parseInt(ts, 36);
-    if (Date.now() - issuedAt > maxAgeMs) return false;
-    return true;
-  }
-
-  // 1. Valid token
-  const validToken = createToken('admin');
-  assert.equal(verifyToken(validToken), true);
-
-  // 2. Tampered token payload
-  const tampered = validToken.replace('admin', 'hacker');
-  assert.equal(verifyToken(tampered), false);
-
-  // 3. Expired token (13 hours old)
-  const expiredToken = createToken('admin', -(13 * 60 * 60 * 1000));
-  assert.equal(verifyToken(expiredToken), false);
-
-  // 4. Malformed token
-  assert.equal(verifyToken('malformed.token'), false);
-  assert.equal(verifyToken(''), false);
-  assert.equal(verifyToken(null), false);
-});
-
-test('Stats Calculation - Star percentages and average are mathematically sound', () => {
-  const distribution = { 5: 18, 4: 5, 3: 1, 2: 0, 1: 0 };
-  const total = Object.values(distribution).reduce((a, b) => a + b, 0); // 24
-  assert.equal(total, 24);
-
-  const sumRatings = 5 * 18 + 4 * 5 + 3 * 1; // 90 + 20 + 3 = 113
-  const avg = parseFloat((sumRatings / total).toFixed(2)); // 4.71
-  assert.equal(avg, 4.71);
-
-  const pct5 = Math.round((distribution[5] / total) * 100); // 75%
-  assert.equal(pct5, 75);
-});
-
-test('Review Ordering - Default chronological ordering sorts earliest to latest (15 Nov before 18 Nov)', () => {
-  const reviews = [
-    { id: '1', customer_name: 'Priya Iyer', created_at: '2026-11-18T08:29:18.899Z' },
-    { id: '2', customer_name: 'Ananya Sharma', created_at: '2026-11-15T14:29:18.899Z' },
-    { id: '3', customer_name: 'Vikram Mehta', created_at: '2026-11-13T10:00:00.000Z' }
-  ];
-
-  // Oldest first (chronological order)
-  const sorted = [...reviews].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  assert.equal(sorted[0].customer_name, 'Vikram Mehta');
-  assert.equal(sorted[1].customer_name, 'Ananya Sharma');
-  assert.equal(sorted[2].customer_name, 'Priya Iyer');
-  assert.ok(new Date(sorted[1].created_at) < new Date(sorted[2].created_at));
-});
-
-test('Admin Approval - Automatically grants verified purchase badge on approval', () => {
-  const pendingReview = {
-    id: 'test-123',
-    customer_name: 'Priya Iyer',
-    status: 'PENDING',
-    verified_purchase: false
-  };
-
-  function approveReview(rev, moderatedBy = 'Store Admin') {
-    return {
-      ...rev,
-      status: 'APPROVED',
-      verified_purchase: true,
-      moderated_at: new Date().toISOString(),
-      moderated_by: moderatedBy
-    };
-  }
-
-  const approved = approveReview(pendingReview);
-  assert.equal(approved.status, 'APPROVED');
-  assert.equal(approved.verified_purchase, true);
-  assert.ok(approved.moderated_at);
-});
-

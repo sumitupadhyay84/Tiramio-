@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
-import { verifyAdminRequest } from '@/lib/adminAuth';
+import { getAuthenticatedAdmin } from '@/lib/adminAuth';
 
 export async function GET(request) {
-  const isAuth = verifyAdminRequest(request);
-  if (!isAuth) {
+  const admin = getAuthenticatedAdmin(request);
+  if (!admin) {
     return NextResponse.json({ message: 'Unauthorized. Admin privileges required.' }, { status: 401 });
   }
 
   return NextResponse.json({
     authenticated: true,
-    role: 'administrator',
-    user: 'admin',
+    role: admin.role,
+    user: admin.username,
     verifiedAt: new Date().toISOString()
   });
 }

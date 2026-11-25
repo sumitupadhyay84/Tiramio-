@@ -1,49 +1,48 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import Link from 'next/link';
+import { useState, useCallback, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
-  Star, Camera, X, Heart, ArrowUpRight, CheckCircle2, Sparkles,
+  Star, Heart, ArrowUpRight, CheckCircle2, Sparkles,
   AlertCircle, ArrowLeft, Check, Coffee, Package, Lock,
-  CakeSlice, ChevronDown, ChevronUp, User, Mail
+  CakeSlice, ChevronDown, ChevronUp, User, Mail, Phone, Receipt, Copy, ShieldCheck
 } from 'lucide-react';
 
 const api = process.env.NEXT_PUBLIC_API_URL || '';
 
 const productOptions = [
   {
-    id: 'Dear Misu Mini (100g)',
+    id: 'Dear Misu Mini',
     name: 'Dear Misu Mini',
-    weight: '100g',
-    price: '₹69',
+    price: '₹119',
     tag: 'Personal Treat',
     image: '/images/dearmisu-mini-card.webp'
   },
   {
-    id: 'Dear Misu Classic (200g)',
+    id: 'Dear Misu Classic',
     name: 'Dear Misu Classic',
-    weight: '200g',
-    price: '₹129',
+    price: '₹179',
     tag: 'Most Loved',
     image: '/images/dearmisu-classic-card.webp',
     featured: true
   },
   {
-    id: 'Dear Misu Share Box (300g)',
+    id: 'Dear Misu Share Box',
     name: 'Dear Misu Share Box',
-    weight: '300g',
-    price: '₹189',
+    price: '₹229',
     tag: 'Best Value',
     image: '/images/dearmisu-share-card.webp'
   }
 ];
 
 const tasteCategories = [
-  { key: 'tasteRating', label: 'Overall Taste', hint: 'Harmony of ingredients' },
+  { key: 'tasteRating', label: 'Taste', hint: 'Harmony of ingredients' },
+  { key: 'coffeeIntensityRating', label: 'Coffee Flavour', hint: 'Espresso soak balance' },
   { key: 'creaminessRating', label: 'Creaminess', hint: 'Silky mascarpone blend' },
-  { key: 'coffeeIntensityRating', label: 'Coffee Intensity', hint: 'Espresso soak balance' },
   { key: 'sweetnessRating', label: 'Sweetness', hint: 'Sugar level balance' },
-  { key: 'textureRating', label: 'Texture & Softness', hint: 'Cloud-soft sponge layers' },
-  { key: 'chocolateRating', label: 'Cocoa Flavour', hint: 'Dusted chocolate finish' },
+  { key: 'textureRating', label: 'Texture', hint: 'Cloud-soft sponge layers' },
+  { key: 'chocolateRating', label: 'Chocolate', hint: 'Dusted cocoa finish' },
   { key: 'presentationRating', label: 'Presentation', hint: 'Visual craft & packaging' },
 ];
 
@@ -126,7 +125,7 @@ function MiniStars({ value, onChange, label }) {
           key={s}
           type="button"
           className="rev-mini-star-btn"
-          onClick={() => onChange(s)}
+          onClick={() => onChange(value === s ? 0 : s)}
           onMouseEnter={() => setHover(s)}
           onMouseLeave={() => setHover(0)}
           aria-label={`${s} stars`}
@@ -143,10 +142,17 @@ function MiniStars({ value, onChange, label }) {
   );
 }
 
-export default function ReviewPage() {
+function ReviewFormInner() {
+  const searchParams = useSearchParams();
+  const editReviewId = searchParams.get('edit') || '';
+  const editToken = searchParams.get('token') || '';
+  const isEditMode = Boolean(editReviewId && editToken);
+
   const [form, setForm] = useState({
     customerName: '',
     customerEmail: '',
+    customerPhone: '',
+    orderRef: '',
     productName: '',
     overallRating: 0,
     tasteRating: 0,
@@ -161,17 +167,50 @@ export default function ReviewPage() {
     texturePreference: '',
     feedbackTags: [],
     comment: '',
-    recommendation: 'Definitely!',
+    recommendation: '', // Never pre-select Yes so stats stay genuine
   });
 
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [loadingExisting, setLoadingExisting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitResult, setSubmitResult] = useState(null);
+  const [copiedEditLink, setCopiedEditLink] = useState(false);
   const [showTasteDetail, setShowTasteDetail] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
-  const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    setLoadingExisting(true);
+    fetch(`${api}/api/reviews/${encodeURIComponent(editReviewId)}?token=${encodeURIComponent(editToken)}`)
+      .then(async res => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.review) throw new Error(data.message || 'Unable to load your review for editing.');
+        const r = data.review;
+        setForm({
+          customerName: r.customer_name || '',
+          customerEmail: '',
+          customerPhone: '',
+          orderRef: '',
+          productName: r.product_name || '',
+          overallRating: r.overall_rating || 0,
+          tasteRating: r.taste_rating || 0,
+          creaminessRating: r.creaminess_rating || 0,
+          coffeeIntensityRating: r.coffee_intensity_rating || 0,
+          sweetnessRating: r.sweetness_rating || 0,
+          textureRating: r.texture_rating || 0,
+          chocolateRating: r.chocolate_rating || 0,
+          presentationRating: r.presentation_rating || 0,
+          sweetnessPreference: r.sweetness_preference || '',
+          coffeePreference: r.coffee_preference || '',
+          texturePreference: r.texture_preference || '',
+          feedbackTags: Array.isArray(r.feedback_tags) ? r.feedback_tags : [],
+          comment: r.comment || '',
+          recommendation: r.recommendation || '',
+        });
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoadingExisting(false));
+  }, [isEditMode, editReviewId, editToken]);
 
   const updateField = useCallback((key, value) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -193,33 +232,10 @@ export default function ReviewPage() {
     }));
   }, []);
 
-  const handleImage = useCallback(e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.type)) {
-      setError('Please upload a JPG, PNG, or WebP image.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be under 5 MB in size.');
-      return;
-    }
-    setImage(file);
-    setImagePreview(URL.createObjectURL(file));
-    setError('');
-  }, []);
-
-  const removeImage = useCallback(() => {
-    setImage(null);
-    setImagePreview('');
-    if (fileRef.current) fileRef.current.value = '';
-  }, []);
-
   const validate = () => {
     const errs = {};
     if (!form.customerName.trim() || form.customerName.trim().length < 2) {
-      errs.customerName = 'Please enter your name (at least 2 characters).';
+      errs.customerName = 'Please enter your display name (at least 2 characters).';
     }
     if (!form.productName) {
       errs.productName = 'Please select which Dear Misu box you enjoyed.';
@@ -232,6 +248,9 @@ export default function ReviewPage() {
     }
     if (form.comment.length > 1000) {
       errs.comment = 'Your review exceeds the 1000 character limit.';
+    }
+    if (form.customerPhone && !/^[6-9]\d{9}$/.test(form.customerPhone)) {
+      errs.customerPhone = 'If providing a mobile number, enter a valid 10-digit number.';
     }
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -250,27 +269,62 @@ export default function ReviewPage() {
     setError('');
 
     try {
-      const formData = new FormData();
-      formData.append('customerName', form.customerName.trim());
-      if (form.customerEmail) formData.append('customerEmail', form.customerEmail.trim());
-      formData.append('productName', form.productName);
-      formData.append('overallRating', String(form.overallRating));
-      tasteCategories.forEach(({ key }) => {
-        if (form[key]) formData.append(key, String(form[key]));
-      });
-      if (form.sweetnessPreference) formData.append('sweetnessPreference', form.sweetnessPreference);
-      if (form.coffeePreference) formData.append('coffeePreference', form.coffeePreference);
-      if (form.texturePreference) formData.append('texturePreference', form.texturePreference);
-      if (form.feedbackTags.length) formData.append('feedbackTags', JSON.stringify(form.feedbackTags));
-      formData.append('comment', form.comment.trim());
-      if (form.recommendation) formData.append('recommendation', form.recommendation);
-      formData.append('honeypot', '');
-      if (image) formData.append('image', image);
+      const payload = {
+        customerName: form.customerName.trim(),
+        customerEmail: form.customerEmail ? form.customerEmail.trim() : null,
+        customerPhone: form.customerPhone ? form.customerPhone.trim() : null,
+        orderRef: form.orderRef ? form.orderRef.trim().toUpperCase() : null,
+        productName: form.productName,
+        overallRating: Number(form.overallRating),
+        sweetnessPreference: form.sweetnessPreference || null,
+        coffeePreference: form.coffeePreference || null,
+        texturePreference: form.texturePreference || null,
+        feedbackTags: form.feedbackTags || [],
+        comment: form.comment.trim(),
+        recommendation: form.recommendation || null,
+        honeypot: ''
+      };
 
-      const res = await fetch(`${api}/api/reviews`, { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Something went wrong. Please try again.');
-      setSubmitted(true);
+      // Only send category ratings explicitly set by the customer
+      tasteCategories.forEach(({ key }) => {
+        if (form[key]) payload[key] = Number(form[key]);
+      });
+
+      const url = isEditMode
+        ? `${api}/api/reviews/${encodeURIComponent(editReviewId)}`
+        : `${api}/api/reviews`;
+      const method = isEditMode ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(isEditMode ? { 'x-review-edit-token': editToken } : {})
+        },
+        body: JSON.stringify(isEditMode ? { ...payload, editToken } : payload)
+      });
+
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = {};
+      }
+
+      if (!res.ok) {
+        const errorMsg = data.message || (responseText && !responseText.startsWith('<') ? responseText : `Server error (${res.status}). Please try again.`);
+        throw new Error(errorMsg);
+      }
+
+      setSubmitResult({
+        isEdit: isEditMode,
+        reviewId: data.reviewId || editReviewId,
+        editToken: data.editToken || editToken,
+        verificationStatus: data.verificationStatus || null,
+        verificationReason: data.verificationReason || null,
+      });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err.message || 'Could not connect to the review server. Please retry.');
@@ -279,7 +333,24 @@ export default function ReviewPage() {
     }
   };
 
-  if (submitted) {
+  if (loadingExisting) {
+    return (
+      <div className="rev-page-root">
+        <div className="rev-page-wrap">
+          <div className="rev-success-card">
+            <p>Loading your review for editing...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitResult) {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const editUrl = submitResult.reviewId && submitResult.editToken
+      ? `${origin}/review?edit=${encodeURIComponent(submitResult.reviewId)}&token=${encodeURIComponent(submitResult.editToken)}`
+      : '';
+
     return (
       <div className="rev-page-root">
         <div className="rev-page-wrap">
@@ -288,20 +359,54 @@ export default function ReviewPage() {
             <div className="rev-success-badge">
               <CheckCircle2 size={46} strokeWidth={2} />
             </div>
-            <span className="rev-success-eyebrow">♡ WITH ALL OUR LOVE</span>
-            <h2>Thank you for sharing your Dear Misu moment!</h2>
+            <span className="rev-success-eyebrow">♡ THANK YOU FOR SHARING</span>
+            <h2>
+              {submitResult.isEdit
+                ? 'Your review update has been received!'
+                : 'Thank you for sharing your Dear Misu experience!'}
+            </h2>
             <p className="rev-success-message">
-              Your feedback has reached our pastry kitchen. Every note you shared helps us make each batch even more delicate and dreamy.
+              Your review has been submitted and will undergo brief moderation before publication on our website. Your original opinions and ratings are never altered.
             </p>
-            <div className="rev-success-status-pill">
-              <span>Status:</span> <b>Under Review & Publishing Shortly</b>
-            </div>
+
+            {submitResult.verificationStatus && (
+              <div className="rev-success-status-pill">
+                <ShieldCheck size={14} />
+                <span>Purchase Status:</span>{' '}
+                <b>
+                  {submitResult.verificationStatus === 'VERIFIED_PURCHASE'
+                    ? 'Verified Purchase (Matched to Delivered Order)'
+                    : 'Customer Review (Unverified Purchase)'}
+                </b>
+              </div>
+            )}
+
+            {editUrl && (
+              <div className="rev-edit-link-box">
+                <p>Save this private link if you ever wish to update your own review:</p>
+                <div className="rev-edit-link-row">
+                  <input type="text" readOnly value={editUrl} aria-label="Private review edit link" />
+                  <button
+                    type="button"
+                    className="copy-btn"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(editUrl);
+                      setCopiedEditLink(true);
+                      setTimeout(() => setCopiedEditLink(false), 2500);
+                    }}
+                  >
+                    {copiedEditLink ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="rev-success-actions">
-              <a href="/" className="button button-dark rev-action-btn">
+              <Link href="/#reviews" className="button button-dark rev-action-btn">
                 Back to Dear Misu <ArrowUpRight size={16} />
-              </a>
-              <a href="/#menu" className="button button-light rev-action-btn">
-                Order Another Box <CakeSlice size={16} />
+              </Link>
+              <a href="/review-policy" className="button button-light rev-action-btn">
+                Read Review Policy <ArrowUpRight size={16} />
               </a>
             </div>
           </div>
@@ -312,63 +417,62 @@ export default function ReviewPage() {
 
   return (
     <div className="rev-page-root">
-      {/* Top Floating Brand Navigation */}
       <nav className="rev-top-nav">
-        <a href="/" className="rev-nav-back">
-          <ArrowLeft size={16} /> <span>Storefront</span>
-        </a>
-        <a href="/" className="rev-nav-brand">
+        <Link href="/" className="rev-nav-back">
+          <ArrowLeft size={16} /> <span>Back to Dear Misu</span>
+        </Link>
+        <Link href="/" className="rev-nav-brand">
           <img src="/images/dear-misu-badge.webp" alt="Dear Misu" width={34} height={34} />
           <strong>Dear Misu</strong>
-        </a>
-        <span className="rev-nav-tag">Tasting Feedback</span>
+        </Link>
+        <a href="/review-policy" className="rev-nav-tag" style={{ textDecoration: 'none' }}>Review Policy</a>
       </nav>
 
       <div className="rev-page-wrap">
-        {/* Luxury Hero Banner */}
         <header className="rev-hero-card">
           <div className="rev-hero-corner-sparkle">✦</div>
           <div className="rev-hero-eyebrow">
             <span className="rev-eyebrow-pip" />
-            <span>AUTHENTIC TASTE FEEDBACK</span>
+            <span>{isEditMode ? 'UPDATE YOUR FEEDBACK' : 'AUTHENTIC CUSTOMER FEEDBACK'}</span>
             <span className="rev-eyebrow-pip" />
           </div>
           <h1>
-            Enjoyed every <em>spoonful?</em>
+            {isEditMode ? <>Edit your <em>review</em></> : <>Enjoyed every <em>spoonful?</em></>}
           </h1>
           <p className="rev-hero-sub">
-            Layers of Love, in Every Bite. Tell us what made your Dear Misu dessert moment special.
+            {isEditMode
+              ? 'Update your genuine thoughts below. Previous versions remain safely logged for transparency.'
+              : 'Share your honest experience. Reviews are moderated only for spam and personal safety — never altered.'}
           </p>
 
           <div className="rev-hero-badges-row">
             <div className="rev-mini-badge">
               <Sparkles size={12} />
-              <span>Takes 60 seconds</span>
+              <span>Honest &amp; Unaltered</span>
             </div>
             <div className="rev-mini-badge">
-              <Heart size={12} />
-              <span>100% Genuine Reviews</span>
+              <ShieldCheck size={12} />
+              <span>Order Verification Optional</span>
             </div>
             <div className="rev-mini-badge">
               <Lock size={12} />
-              <span>No Account Needed</span>
+              <span>Private Details Protected</span>
             </div>
           </div>
         </header>
 
         <form onSubmit={handleSubmit} className="rev-form-container" noValidate>
-          {/* Honeypot Spam Trap */}
           <div style={{ position: 'absolute', left: '-9999px', opacity: 0 }} aria-hidden="true">
             <input name="honeypot" tabIndex={-1} autoComplete="off" />
           </div>
 
-          {/* STEP 1: VISUAL PRODUCT SELECTION */}
+          {/* STEP 1: PRODUCT */}
           <section className={`rev-step-card ${fieldErrors.productName ? 'rev-error-anchor' : ''}`}>
             <div className="rev-step-header">
               <span className="rev-step-number">01</span>
               <div>
                 <h3>Which Dear Misu did you have? *</h3>
-                <p>Tap your box to select</p>
+                <p>{isEditMode ? 'Product reviewed' : 'Tap your box to select'}</p>
               </div>
             </div>
 
@@ -379,6 +483,7 @@ export default function ReviewPage() {
                   <button
                     key={prod.id}
                     type="button"
+                    disabled={isEditMode}
                     className={`rev-product-pill-card ${isSelected ? 'is-selected' : ''}`}
                     onClick={() => updateField('productName', prod.id)}
                   >
@@ -393,7 +498,7 @@ export default function ReviewPage() {
                     <div className="rev-product-card-copy">
                       <span className="rev-card-tagline">{prod.tag}</span>
                       <strong>{prod.name}</strong>
-                      <span className="rev-card-weight">{prod.weight} · {prod.price}</span>
+                      <span className="rev-card-weight">{prod.price}</span>
                     </div>
                   </button>
                 );
@@ -411,7 +516,7 @@ export default function ReviewPage() {
             <div className="rev-step-header">
               <span className="rev-step-number">02</span>
               <div>
-                <h3>How much did you love your Dear Misu? *</h3>
+                <h3>Your overall rating *</h3>
                 <p>Give your honest rating from 1 to 5 stars</p>
               </div>
             </div>
@@ -435,7 +540,7 @@ export default function ReviewPage() {
               <span className="rev-step-number">03</span>
               <div>
                 <h3>What stood out most?</h3>
-                <p>Tap all that match your spoonful (optional)</p>
+                <p>Tap any highlights that match your experience (optional)</p>
               </div>
             </div>
 
@@ -464,7 +569,7 @@ export default function ReviewPage() {
               <span className="rev-step-number">04</span>
               <div>
                 <h3>Tell us about your experience *</h3>
-                <p>Every little detail matters to us</p>
+                <p>Your original feedback is published exactly as written</p>
               </div>
             </div>
 
@@ -476,7 +581,7 @@ export default function ReviewPage() {
                 maxLength={1000}
                 value={form.comment}
                 onChange={e => updateField('comment', e.target.value)}
-                placeholder="What did you love most about your Dear Misu? The soft coffee-soaked sponge, cloud-soft cream, cocoa snowfall... tell us everything!"
+                placeholder="Share your honest thoughts on taste, creaminess, coffee balance, packaging, or delivery..."
                 className={fieldErrors.comment ? 'rev-input-has-error' : ''}
               />
               <div className="rev-counter-row">
@@ -494,7 +599,7 @@ export default function ReviewPage() {
             )}
           </section>
 
-          {/* STEP 5: OPTIONAL DEEP SENSORY TASTE BREAKDOWN */}
+          {/* STEP 5: OPTIONAL CATEGORY RATINGS */}
           <section className="rev-step-card rev-expandable-section">
             <button
               type="button"
@@ -505,10 +610,10 @@ export default function ReviewPage() {
                 <span className="rev-step-number">05</span>
                 <div>
                   <div className="rev-toggle-title-line">
-                    <h3>Taste & Texture Breakdown</h3>
+                    <h3>Category Ratings</h3>
                     <span className="rev-optional-chip">Optional</span>
                   </div>
-                  <p>Rate creaminess, sweetness, coffee intensity & more</p>
+                  <p>Rate taste, coffee flavour, creaminess, sweetness &amp; more individually</p>
                 </div>
               </div>
               <div className="rev-toggle-chevron">
@@ -534,7 +639,6 @@ export default function ReviewPage() {
                   ))}
                 </div>
 
-                {/* Preference Choices */}
                 <div className="rev-preferences-box">
                   <div className="rev-pref-category">
                     <span className="pref-category-title">Sweetness Balance</span>
@@ -571,7 +675,7 @@ export default function ReviewPage() {
                   <div className="rev-pref-category">
                     <span className="pref-category-title">Texture Feel</span>
                     <div className="pref-pills-row">
-                      {['Extra creamy', 'Soft and fluffy', 'Rich and layered', 'Perfect balance'].map(opt => (
+                      {['Extra creamy', 'Soft and fluffy', 'Rich and layered', 'Perfectly balanced'].map(opt => (
                         <button
                           key={opt}
                           type="button"
@@ -588,65 +692,24 @@ export default function ReviewPage() {
             )}
           </section>
 
-          {/* STEP 6: PHOTO UPLOAD */}
+          {/* STEP 6: OPTIONAL RECOMMENDATION */}
           <section className="rev-step-card">
             <div className="rev-step-header">
               <span className="rev-step-number">06</span>
               <div>
                 <div className="rev-toggle-title-line">
-                  <h3>Share a photo</h3>
+                  <h3>Would you recommend Dear Misu to friends?</h3>
                   <span className="rev-optional-chip">Optional</span>
                 </div>
-                <p>Show us your tiramisu moment or open box</p>
-              </div>
-            </div>
-
-            {imagePreview ? (
-              <div className="rev-uploaded-preview-card">
-                <img src={imagePreview} alt="Customer upload preview" />
-                <button
-                  type="button"
-                  className="rev-remove-photo-btn"
-                  onClick={removeImage}
-                  title="Remove photograph"
-                >
-                  <X size={16} /> Remove Photo
-                </button>
-              </div>
-            ) : (
-              <label className="rev-dropzone-uploader" htmlFor="rev-photo-input">
-                <div className="rev-dropzone-icon">
-                  <Camera size={26} />
-                </div>
-                <strong>Tap to upload a photo</strong>
-                <small>JPG, PNG, or WebP up to 5 MB</small>
-                <input
-                  ref={fileRef}
-                  id="rev-photo-input"
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleImage}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            )}
-          </section>
-
-          {/* STEP 7: RECOMMENDATION */}
-          <section className="rev-step-card">
-            <div className="rev-step-header">
-              <span className="rev-step-number">07</span>
-              <div>
-                <h3>Would you recommend Dear Misu to friends?</h3>
-                <p>Spread the sweet word</p>
+                <p>Tap an option if you&apos;d like to include your recommendation</p>
               </div>
             </div>
 
             <div className="rev-rec-buttons-grid">
               {[
                 { value: 'Definitely!', label: 'Definitely! ♡', desc: 'A must-try treat' },
-                { value: 'Maybe', label: 'Maybe', desc: 'Good, but personal choice' },
-                { value: 'Not this time', label: 'Not this time', desc: 'Needs tweaking' }
+                { value: 'Maybe', label: 'Maybe', desc: 'Good, personal taste varies' },
+                { value: 'Not this time', label: 'Not this time', desc: 'Not for me' }
               ].map(opt => {
                 const isSelected = form.recommendation === opt.value;
                 return (
@@ -654,7 +717,7 @@ export default function ReviewPage() {
                     key={opt.value}
                     type="button"
                     className={`rev-rec-choice-btn ${isSelected ? 'active' : ''}`}
-                    onClick={() => updateField('recommendation', opt.value)}
+                    onClick={() => updateField('recommendation', isSelected ? '' : opt.value)}
                   >
                     <strong>{opt.label}</strong>
                     <small>{opt.desc}</small>
@@ -664,20 +727,20 @@ export default function ReviewPage() {
             </div>
           </section>
 
-          {/* STEP 8: CUSTOMER INFORMATION */}
-          <section className={`rev-step-card ${fieldErrors.customerName ? 'rev-error-anchor' : ''}`}>
+          {/* STEP 7: DISPLAY NAME & OPTIONAL PURCHASE VERIFICATION */}
+          <section className={`rev-step-card ${fieldErrors.customerName || fieldErrors.customerPhone ? 'rev-error-anchor' : ''}`}>
             <div className="rev-step-header">
-              <span className="rev-step-number">08</span>
+              <span className="rev-step-number">07</span>
               <div>
-                <h3>Your Details</h3>
-                <p>So we know who to thank</p>
+                <h3>Your Display Name &amp; Purchase Verification</h3>
+                <p>Choose how your name appears publicly; optionally verify your completed order</p>
               </div>
             </div>
 
             <div className="rev-inputs-stack">
               <div className="rev-input-group">
                 <label htmlFor="rev-cust-name">
-                  <User size={14} /> <span>Your Name *</span>
+                  <User size={14} /> <span>Public Display Name *</span>
                 </label>
                 <input
                   id="rev-cust-name"
@@ -686,34 +749,74 @@ export default function ReviewPage() {
                   maxLength={80}
                   value={form.customerName}
                   onChange={e => updateField('customerName', e.target.value)}
-                  placeholder="e.g. Ananya or Rahul"
+                  placeholder="e.g. Ananya S. or Rahul"
                   className={fieldErrors.customerName ? 'rev-input-has-error' : ''}
                 />
+                <small style={{ color: '#8c7362', fontSize: '11px' }}>
+                  Displayed publicly on your review card. You may use your first name or initials.
+                </small>
                 {fieldErrors.customerName && (
                   <span className="rev-field-error-text">{fieldErrors.customerName}</span>
                 )}
               </div>
 
-              <div className="rev-input-group">
-                <label htmlFor="rev-cust-email">
-                  <Mail size={14} /> <span>Email Address <small>(Optional)</small></span>
-                </label>
-                <input
-                  id="rev-cust-email"
-                  type="email"
-                  value={form.customerEmail}
-                  onChange={e => updateField('customerEmail', e.target.value)}
-                  placeholder="name@example.com (Never published)"
-                />
-                <div className="rev-privacy-guarantee">
-                  <Lock size={12} />
-                  <span>Your email is strictly private and never shared publicly.</span>
-                </div>
+              {!isEditMode && (
+                <>
+                  <div className="rev-input-group">
+                    <label htmlFor="rev-order-ref">
+                      <Receipt size={14} /> <span>Order Reference <small>(Optional — for Verified Purchase badge)</small></span>
+                    </label>
+                    <input
+                      id="rev-order-ref"
+                      type="text"
+                      maxLength={32}
+                      value={form.orderRef}
+                      onChange={e => updateField('orderRef', e.target.value.toUpperCase())}
+                      placeholder="e.g. DEAR-1001"
+                    />
+                  </div>
+
+                  <div className="rev-input-group">
+                    <label htmlFor="rev-cust-phone">
+                      <Phone size={14} /> <span>Order Mobile Number <small>(Optional — private, matches completed order)</small></span>
+                    </label>
+                    <input
+                      id="rev-cust-phone"
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={form.customerPhone}
+                      onChange={e => updateField('customerPhone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="10-digit WhatsApp/order number"
+                      className={fieldErrors.customerPhone ? 'rev-input-has-error' : ''}
+                    />
+                    {fieldErrors.customerPhone && (
+                      <span className="rev-field-error-text">{fieldErrors.customerPhone}</span>
+                    )}
+                  </div>
+
+                  <div className="rev-input-group">
+                    <label htmlFor="rev-cust-email">
+                      <Mail size={14} /> <span>Email Address <small>(Optional — strictly private)</small></span>
+                    </label>
+                    <input
+                      id="rev-cust-email"
+                      type="email"
+                      value={form.customerEmail}
+                      onChange={e => updateField('customerEmail', e.target.value)}
+                      placeholder="name@example.com (Never published)"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="rev-privacy-guarantee">
+                <Lock size={12} />
+                <span>Your mobile number, order ID, and email are strictly private and never shown on the public website.</span>
               </div>
             </div>
           </section>
 
-          {/* Global Error Banner */}
           {error && (
             <div className="rev-banner-alert" role="alert">
               <AlertCircle size={18} />
@@ -721,7 +824,6 @@ export default function ReviewPage() {
             </div>
           )}
 
-          {/* SUBMIT BUTTON */}
           <div className="rev-submit-section">
             <button
               type="submit"
@@ -731,18 +833,18 @@ export default function ReviewPage() {
               {submitting ? (
                 <>
                   <span className="review-spinner" />
-                  <span>Submitting your review...</span>
+                  <span>{isEditMode ? 'Updating review...' : 'Submitting review...'}</span>
                 </>
               ) : (
                 <>
                   <Heart size={18} fill="currentColor" />
-                  <span>Share My Sweet Experience ♡</span>
+                  <span>{isEditMode ? 'Save Review Update' : 'Submit Honest Review'}</span>
                   <ArrowUpRight size={18} />
                 </>
               )}
             </button>
             <p className="rev-submit-disclaimer">
-              Reviews are personally reviewed by our team to maintain an authentic community.
+              Submitted reviews undergo moderation for spam &amp; safety before appearing publicly. Read our <a href="/review-policy">Review Policy</a>.
             </p>
           </div>
         </form>
@@ -752,5 +854,13 @@ export default function ReviewPage() {
         </footer>
       </div>
     </div>
+  );
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense fallback={<div className="rev-page-root"><div className="rev-page-wrap"><div className="rev-success-card"><p>Loading review form...</p></div></div></div>}>
+      <ReviewFormInner />
+    </Suspense>
   );
 }

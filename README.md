@@ -7,14 +7,14 @@ A responsive, premium dessert storefront for the Dear Misu brand.
 - Tagline: Layers of Love, in Every Bite.
 - Palette: espresso brown, mascarpone cream, cocoa, and muted gold
 - Confirmed contact: WhatsApp `8433198122`
-- Menu: 100 g — ₹69 · 200 g — ₹129 · 300 g — ₹189
+- Menu: Dear Misu Mini — ₹119 · Dear Misu Classic — ₹179 · Dear Misu Share Box — ₹229
 
 ## Opening hero film and menu visuals
 
 - The supplied 8-second Google Flow MP4 plays **muted, automatically, and continuously in a loop** as the full-bleed background of the opening hero. The source file has no audio stream; the player also sets `muted`, `defaultMuted`, `loop`, and `playsInline`.
 - The hero keeps a separate foreground dessert photograph and a dark responsive overlay so the headline, tagline, and order actions remain legible over every video frame.
 - Mini, Classic, and Share Box use separate animated WebP open-box visuals. CSS scales the open-box artwork progressively from Mini to Classic to Share Box without cropping the packaging.
-- The menu communicates value using the confirmed weights/prices: Mini ₹69/100 g, Classic ₹64.50/100 g, and Share Box ₹63/100 g. Classic highlights ₹9 saved versus two Mini boxes; Share Box highlights ₹18 saved versus three Mini boxes.
+- The menu communicates value using the confirmed prices: Mini ₹119, Classic ₹179, and Share Box ₹229. Classic highlights ₹59 saved versus two Mini boxes; Share Box highlights ₹128 saved versus three Mini boxes.
 - Reduced-motion preferences replace the moving hero film with its poster fallback and stop the product-image float animation.
 
 
@@ -119,7 +119,7 @@ The QR in `public/images/order-qr.png` opens a WhatsApp conversation for `+91 84
 
 ### Add another dessert later
 
-The production frontend loads the active catalogue from `GET /api/products`, and order validation accepts product slugs stored in PostgreSQL. To add another dessert, add its image under `public/images/`, then insert a row into `products` with a unique lowercase `slug`, `name`, `weight_grams`, `price_paise`, `short_description`, `badge`, `image_url`, and `sort_order`. The new item appears in the menu and box builder without hard-coding another product into the React page. Keep `price_paise` as the single source of truth; the API calculates the order total from database prices.
+The production frontend loads the active catalogue from `GET /api/products`, and order validation accepts product slugs stored in PostgreSQL. To add another dessert, add its image under `public/images/`, then insert a row into `products` with a unique lowercase `slug`, `name`, `price_paise`, `short_description`, `badge`, `image_url`, and `sort_order`. The new item appears in the menu and box builder without hard-coding another product into the React page. Keep `price_paise` as the single source of truth; the API calculates the order total from database prices.
 
 ## Cinematic motion direction
 

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "0acaaf08-45d8-4a8c-a6a5-81779f72d2d0",
+    "review_id": "2ab9a246-8312-49df-bb2b-2e96c4bc9d6b",
+    "version_number": 1,
+    "overall_rating": 5,
+    "comment": "extremely recommended please visit to taste",
+    "category_ratings": {
+      "taste_rating": 5,
+      "creaminess_rating": 4,
+      "coffee_intensity_rating": 5,
+      "sweetness_rating": 3,
+      "texture_rating": 5,
+      "chocolate_rating": 5,
+      "presentation_rating": 5
+    },
+    "recommendation": "Definitely!",
+    "edited_by": "Rahul verma",
+    "created_at": "2026-11-25T11:17:16.467Z"
+  }
+]
