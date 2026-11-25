@@ -1,33 +1,56 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { Star, ThumbsUp, ChevronDown, Camera, ArrowUpRight, Filter } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  Star, ThumbsUp, ChevronDown, ChevronLeft, ChevronRight,
+  ArrowUpRight, Filter, ShieldCheck, Info
+} from 'lucide-react';
 
 const api = process.env.NEXT_PUBLIC_API_URL || '';
 
 const productFilters = [
   { value: '', label: 'All Products' },
-  { value: 'Dear Misu Mini (100g)', label: 'Dear Misu Mini' },
-  { value: 'Dear Misu Classic (200g)', label: 'Dear Misu Classic' },
-  { value: 'Dear Misu Share Box (300g)', label: 'Dear Misu Share Box' },
+  { value: 'Dear Misu Mini', label: 'Dear Misu Mini' },
+  { value: 'Dear Misu Classic', label: 'Dear Misu Classic' },
+  { value: 'Dear Misu Share Box', label: 'Dear Misu Share Box' },
 ];
 
 const ratingFilters = [
   { value: '', label: 'All Ratings' },
-  { value: '5', label: '★★★★★' },
-  { value: '4', label: '★★★★' },
-  { value: '3', label: '★★★' },
-  { value: '2', label: '★★' },
-  { value: '1', label: '★' },
+  { value: '5', label: '5 Stars' },
+  { value: '4', label: '4 Stars' },
+  { value: '3', label: '3 Stars' },
+  { value: '2', label: '2 Stars' },
+  { value: '1', label: '1 Star' },
+];
+
+const verificationFilters = [
+  { value: '', label: 'All Purchases' },
+  { value: 'VERIFIED_PURCHASE', label: 'Verified Purchases Only' },
 ];
 
 const sortOptions = [
-  { value: 'oldest', label: 'Date: Earliest First' },
-  { value: 'newest', label: 'Date: Most Recent' },
+  { value: 'chronological', label: 'Earliest → Latest' },
+  { value: 'newest', label: 'Newest First' },
+  { value: 'oldest', label: 'Oldest First' },
   { value: 'highest', label: 'Highest Rated' },
   { value: 'lowest', label: 'Lowest Rated' },
   { value: 'helpful', label: 'Most Helpful' },
 ];
+
+function getBrowserVoterId() {
+  if (typeof window === 'undefined') return '';
+  try {
+    let vid = localStorage.getItem('dearmisu_voter_id');
+    if (!vid) {
+      vid = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem('dearmisu_voter_id', vid);
+    }
+    return vid;
+  } catch {
+    return '';
+  }
+}
 
 function Stars({ rating, size = 14 }) {
   return (
@@ -41,31 +64,94 @@ function Stars({ rating, size = 14 }) {
 
 function ReviewCard({ review, onHelpful }) {
   const [voted, setVoted] = useState(false);
+  const [voteNotice, setVoteNotice] = useState('');
+  const [showBadgeInfo, setShowBadgeInfo] = useState(false);
+
+  const isVerifiedPurchase = review.purchase_verification_status === 'VERIFIED_PURCHASE';
+  const wasEdited = Boolean(review.customer_edited);
+
+  useEffect(() => {
+    try {
+      const votedIds = JSON.parse(localStorage.getItem('dearmisu_voted_reviews') || '[]');
+      if (Array.isArray(votedIds) && votedIds.includes(review.id)) {
+        setVoted(true);
+      }
+    } catch { /* ignore */ }
+  }, [review.id]);
 
   const handleHelpful = async () => {
     if (voted) return;
     try {
-      const res = await fetch(`${api}/api/reviews/${review.id}/helpful`, { method: 'POST' });
-      const data = await res.json();
-      if (data.helpful) setVoted(true);
-      onHelpful(review.id);
+      const voterId = getBrowserVoterId();
+      const res = await fetch(`${api}/api/reviews/${review.id}/helpful`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(voterId ? { 'x-voter-id': voterId } : {})
+        },
+        body: JSON.stringify({ voterId })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.helpful) {
+        setVoted(true);
+        try {
+          const votedIds = JSON.parse(localStorage.getItem('dearmisu_voted_reviews') || '[]');
+          if (Array.isArray(votedIds) && !votedIds.includes(review.id)) {
+            localStorage.setItem('dearmisu_voted_reviews', JSON.stringify([...votedIds, review.id]));
+          }
+        } catch { /* ignore */ }
+        onHelpful(review.id, data.helpfulCount);
+      } else if (res.status === 409 || data.duplicate) {
+        setVoted(true);
+        setVoteNotice('Already voted');
+        if (typeof data.helpfulCount === 'number') {
+          onHelpful(review.id, data.helpfulCount);
+        }
+      }
     } catch { /* silent */ }
   };
 
   return (
     <article className="rev-card">
       <header className="rev-card-header">
-        <div className="rev-card-avatar">{review.customer_name?.[0]?.toUpperCase() || '♡'}</div>
+        <div className="rev-card-avatar" aria-hidden="true">{review.customer_name?.[0]?.toUpperCase() || '♡'}</div>
         <div className="rev-card-meta">
           <strong>{review.customer_name}</strong>
           <span className="rev-card-product">{review.product_name}</span>
         </div>
-        <time className="rev-card-date">{new Date(review.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</time>
+        <div className="rev-card-date-wrap">
+          <time className="rev-card-date" dateTime={review.created_at}>
+            {new Date(review.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </time>
+          {wasEdited && <span className="rev-edited-tag">Edited</span>}
+        </div>
       </header>
 
       <div className="rev-card-rating">
         <Stars rating={review.overall_rating} />
-        {review.verified_purchase && <span className="rev-verified-badge">✓ Verified</span>}
+        {isVerifiedPurchase ? (
+          <div className="rev-badge-wrap">
+            <button
+              type="button"
+              className="rev-verified-badge-btn"
+              onClick={() => setShowBadgeInfo(!showBadgeInfo)}
+              onMouseEnter={() => setShowBadgeInfo(true)}
+              onMouseLeave={() => setShowBadgeInfo(false)}
+              title="This review is linked to a completed order for this product."
+              aria-expanded={showBadgeInfo}
+            >
+              <ShieldCheck size={11} />
+              <span>Verified Purchase</span>
+            </button>
+            {showBadgeInfo && (
+              <div className="rev-badge-popover" role="tooltip">
+                This review is linked to a completed order for this product.
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="rev-customer-review-badge">Customer Review</span>
+        )}
       </div>
 
       <p className="rev-card-comment">{review.comment}</p>
@@ -76,8 +162,7 @@ function ReviewCard({ review, onHelpful }) {
         </div>
       )}
 
-      {/* Taste detail ratings */}
-      {(review.taste_rating || review.creaminess_rating || review.coffee_intensity_rating) && (
+      {(review.taste_rating || review.creaminess_rating || review.coffee_intensity_rating || review.sweetness_rating || review.texture_rating || review.chocolate_rating || review.presentation_rating) && (
         <div className="rev-card-taste">
           {[
             { key: 'taste_rating', label: 'Taste' },
@@ -96,15 +181,16 @@ function ReviewCard({ review, onHelpful }) {
         </div>
       )}
 
-      {review.customer_image_url && (
-        <div className="rev-card-image">
-          <img src={`${api}${review.customer_image_url}`} alt={`Photo by ${review.customer_name}`} loading="lazy" />
-        </div>
-      )}
-
       <footer className="rev-card-footer">
-        <button className={`rev-helpful-btn ${voted ? 'voted' : ''}`} onClick={handleHelpful} disabled={voted}>
-          <ThumbsUp size={13} /> Helpful {review.helpful_count > 0 && `(${review.helpful_count})`}
+        <button
+          type="button"
+          className={`rev-helpful-btn ${voted ? 'voted' : ''}`}
+          onClick={handleHelpful}
+          disabled={voted}
+          aria-label={`Mark review by ${review.customer_name} as helpful`}
+        >
+          <ThumbsUp size={13} />
+          <span>{voteNotice || 'Helpful'} {review.helpful_count > 0 && `(${review.helpful_count})`}</span>
         </button>
         {review.recommendation === 'Definitely!' && (
           <span className="rev-rec-badge">♡ Recommends</span>
@@ -119,8 +205,8 @@ function RatingBar({ star, count = 0, total = 0, percentage }) {
   const pct = percentage !== undefined
     ? percentage
     : (typeof count === 'object' && count !== null && count.percentage !== undefined
-        ? count.percentage
-        : (total > 0 ? (countVal / total) * 100 : 0));
+      ? count.percentage
+      : (total > 0 ? (countVal / total) * 100 : 0));
   return (
     <div className="rev-dist-row">
       <span className="rev-dist-label">{star}★</span>
@@ -134,14 +220,17 @@ export default function CustomerReviews() {
   const [stats, setStats] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [product, setProduct] = useState('');
   const [rating, setRating] = useState('');
-  const [sort, setSort] = useState('oldest');
+  const [verification, setVerification] = useState('');
+  const [sort, setSort] = useState('chronological'); // Default: Earliest -> Latest left-to-right (latest 10 reviews)
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [galleryImage, setGalleryImage] = useState(null);
+
+  const trackRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -150,42 +239,103 @@ export default function CustomerReviews() {
     } catch { /* silent */ }
   }, []);
 
-  const fetchReviews = useCallback(async (p = 1) => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: p, limit: 6, sort });
+      const params = new URLSearchParams({ page: '1', limit: '10', sort });
       if (product) params.set('product', product);
       if (rating) params.set('rating', rating);
+      if (verification) params.set('verification', verification);
       const res = await fetch(`${api}/api/reviews?${params}`);
       if (res.ok) {
         const data = await res.json();
-        if (p === 1) setReviews(data.reviews);
-        else setReviews(prev => [...prev, ...data.reviews]);
-        setTotal(data.total);
-        setPage(data.page);
-        setTotalPages(data.totalPages);
+        setReviews((data.reviews || []).slice(0, 10));
+        setTotal(data.total || 0);
       }
     } catch { /* silent */ }
     setLoading(false);
-  }, [product, rating, sort]);
+  }, [product, rating, verification, sort]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
-  useEffect(() => { fetchReviews(1); }, [fetchReviews]);
+  useEffect(() => { fetchReviews(); }, [fetchReviews]);
 
-  const handleHelpful = (id) => {
-    setReviews(prev => prev.map(r => r.id === id ? { ...r, helpful_count: (r.helpful_count || 0) + 1 } : r));
+  const checkScroll = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 10);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
+
+    const firstItem = el.querySelector('.rev-slider-item');
+    const cardStep = firstItem ? firstItem.getBoundingClientRect().width + 22 : 372;
+    const idx = Math.min(
+      Math.max(0, Math.round(scrollLeft / cardStep)),
+      Math.max(0, reviews.length - 1)
+    );
+    setActiveIndex(idx);
+  }, [reviews.length]);
+
+  useEffect(() => {
+    checkScroll();
+    const rafId = requestAnimationFrame(checkScroll);
+    const el = trackRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScroll, { passive: true });
+      window.addEventListener('resize', checkScroll);
+      return () => {
+        cancelAnimationFrame(rafId);
+        el.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }
+    return () => cancelAnimationFrame(rafId);
+  }, [checkScroll, reviews]);
+
+  useEffect(() => {
+    if (trackRef.current) {
+      trackRef.current.scrollTo({ left: 0, behavior: 'auto' });
+      setActiveIndex(0);
+    }
+  }, [product, rating, verification, sort]);
+
+  const scrollPrev = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const firstItem = el.querySelector('.rev-slider-item');
+    const step = firstItem ? firstItem.getBoundingClientRect().width + 22 : 372;
+    el.scrollBy({ left: -step, behavior: 'smooth' });
   };
 
-  const customerPhotos = reviews.filter(r => r.customer_image_url);
+  const scrollNext = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const firstItem = el.querySelector('.rev-slider-item');
+    const step = firstItem ? firstItem.getBoundingClientRect().width + 22 : 372;
+    el.scrollBy({ left: step, behavior: 'smooth' });
+  };
+
+  const scrollToReview = (idx) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const items = el.querySelectorAll('.rev-slider-item');
+    if (items[idx]) {
+      items[idx].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    }
+  };
+
+  const handleHelpful = (id, updatedCount) => {
+    setReviews(prev => prev.map(r => r.id === id
+      ? { ...r, helpful_count: typeof updatedCount === 'number' ? updatedCount : (r.helpful_count || 0) + 1 }
+      : r));
+  };
 
   return (
     <section className="rev-section" id="reviews">
       <div className="rev-section-inner section-wrap">
         <div className="rev-heading">
-          <div className="eyebrow left">CUSTOMER LOVE <span className="eyebrow-line" /></div>
-          <h2>A little love from our customers ♡</h2>
-          <p className="rev-heading-sub">Every spoonful tells a story. Share yours with us.</p>
-          <p className="rev-heading-note">Real moments. Real reviews. Made with love.</p>
+          <div className="eyebrow left">CUSTOMER REVIEWS <span className="eyebrow-line" /></div>
+          <h2>Real Experiences. Genuine Dessert Love.</h2>
+          <p className="rev-heading-sub">Discover what our customers think about their Dear Misu experience.</p>
         </div>
 
         {/* Stats Summary */}
@@ -197,9 +347,17 @@ export default function CustomerReviews() {
                 <span className="rev-out-of">/ 5</span>
               </div>
               <Stars rating={Math.round(stats.averageRating)} size={22} />
-              <p className="rev-stats-total">Based on {stats.totalReviews} customer review{stats.totalReviews !== 1 ? 's' : ''}</p>
-              {stats.recommendationPercentage > 0 && (
-                <p className="rev-stats-rec">♡ {stats.recommendationPercentage}% would recommend</p>
+              <p className="rev-stats-total">
+                Based on {stats.totalReviews} published customer review{stats.totalReviews !== 1 ? 's' : ''}
+              </p>
+              <p className="rev-stats-verified-count">
+                <ShieldCheck size={13} />
+                <span>{stats.verifiedPurchaseCount || 0} verified purchase{(stats.verifiedPurchaseCount || 0) === 1 ? '' : 's'}</span>
+              </p>
+              {stats.recommendationPercentage !== null && stats.recommendationResponseCount > 0 && (
+                <p className="rev-stats-rec">
+                  ♡ {stats.recommendationPercentage}% would recommend ({stats.recommendationResponseCount} response{stats.recommendationResponseCount !== 1 ? 's' : ''})
+                </p>
               )}
             </div>
             <div className="rev-stats-dist">
@@ -215,7 +373,7 @@ export default function CustomerReviews() {
           </div>
         ) : !loading ? (
           <div className="rev-empty-state">
-            <p className="rev-empty-text">Be the first to share your Dear Misu moment ♡</p>
+            <p className="rev-empty-text">Be the first to share your Dear Misu experience ♡</p>
             <a href="/review" className="rev-write-cta">
               Write a Review <ArrowUpRight size={15} />
             </a>
@@ -227,42 +385,28 @@ export default function CustomerReviews() {
           </div>
         )}
 
-        {/* Customer Photo Gallery */}
-        {customerPhotos.length > 0 && (
-          <div className="rev-gallery">
-            <h3 className="rev-gallery-title"><Camera size={16} /> Customer moments</h3>
-            <div className="rev-gallery-grid">
-              {customerPhotos.slice(0, 6).map(r => (
-                <button key={r.id} className="rev-gallery-item" onClick={() => setGalleryImage(r)}>
-                  <img src={`${api}${r.customer_image_url}`} alt={`Photo by ${r.customer_name}`} loading="lazy" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Gallery Modal */}
-        {galleryImage && (
-          <div className="rev-gallery-modal" onClick={() => setGalleryImage(null)}>
-            <div className="rev-gallery-modal-content" onClick={e => e.stopPropagation()}>
-              <button className="rev-gallery-close" onClick={() => setGalleryImage(null)}>✕</button>
-              <img src={`${api}${galleryImage.customer_image_url}`} alt={`Photo by ${galleryImage.customer_name}`} />
-              <div className="rev-gallery-info">
-                <strong>{galleryImage.customer_name}</strong>
-                <Stars rating={galleryImage.overall_rating} size={14} />
-                <p>{galleryImage.comment}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Filters & Sort */}
+        {/* Filters, Sort & Cards */}
         {stats && stats.totalReviews > 0 && (
           <>
             <div className="rev-toolbar">
-              <button className="rev-filter-toggle" onClick={() => setShowFilters(!showFilters)}>
-                <Filter size={14} /> Filter & Sort <ChevronDown size={14} className={showFilters ? 'rev-chevron-up' : ''} />
-              </button>
+              <div className="rev-toolbar-left">
+                <button
+                  type="button"
+                  className="rev-filter-toggle"
+                  onClick={() => setShowFilters(!showFilters)}
+                  aria-expanded={showFilters}
+                >
+                  <Filter size={14} /> Filter &amp; Sort <ChevronDown size={14} className={showFilters ? 'rev-chevron-up' : ''} />
+                </button>
+                <select
+                  className="rev-inline-sort"
+                  value={sort}
+                  onChange={e => setSort(e.target.value)}
+                  aria-label="Sort customer reviews"
+                >
+                  {sortOptions.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+              </div>
               <a href="/review" className="rev-write-cta">
                 Write a Review <ArrowUpRight size={15} />
               </a>
@@ -276,40 +420,101 @@ export default function CustomerReviews() {
                 <select value={rating} onChange={e => setRating(e.target.value)} aria-label="Filter by rating">
                   {ratingFilters.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
-                <select value={sort} onChange={e => setSort(e.target.value)} aria-label="Sort reviews">
-                  {sortOptions.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                <select value={verification} onChange={e => setVerification(e.target.value)} aria-label="Filter by purchase verification">
+                  {verificationFilters.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
               </div>
             )}
 
-            {/* Review Cards */}
-            <div className="rev-grid">
-              {reviews.map(review => (
-                <ReviewCard key={review.id} review={review} onHelpful={handleHelpful} />
-              ))}
+            <div className="rev-slider-container">
+              <div className="rev-slider-top-bar">
+                <div className="rev-queue-status">
+                  <span className="rev-public-subnote">
+                    Customer experiences sorted by date · Showing {reviews.length} of {total} published review{total === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <div className="rev-nav-controls">
+                  <button
+                    type="button"
+                    className="rev-nav-arrow"
+                    onClick={scrollPrev}
+                    disabled={!canScrollLeft}
+                    aria-label="Previous customer reviews"
+                    title="Previous reviews"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    className="rev-nav-arrow"
+                    onClick={scrollNext}
+                    disabled={!canScrollRight}
+                    aria-label="Next customer reviews"
+                    title="Next reviews"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="rev-slider-viewport">
+                <div
+                  ref={trackRef}
+                  className="rev-slider-track"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Customer Reviews Carousel"
+                >
+                  {loading ? (
+                    [1, 2, 3].map(i => (
+                      <div key={i} className="rev-slider-item">
+                        <div className="rev-skeleton-card" />
+                      </div>
+                    ))
+                  ) : reviews.length === 0 ? (
+                    <p className="rev-no-results">No published reviews match your selected filters.</p>
+                  ) : (
+                    reviews.map((review, idx) => (
+                      <div key={review.id} className="rev-slider-item" data-index={idx}>
+                        <ReviewCard review={review} onHelpful={handleHelpful} />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {reviews.length > 1 && (
+                <div className="rev-slider-footer">
+                  <div className="rev-slider-dots">
+                    {reviews.map((r, idx) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className={`rev-slider-dot ${idx === activeIndex ? 'active' : ''}`}
+                        onClick={() => scrollToReview(idx)}
+                        aria-label={`View review ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-
-            {loading && (
-              <div className="rev-loading">
-                {[1, 2, 3].map(i => <div key={i} className="rev-skeleton-card" />)}
-              </div>
-            )}
-
-            {!loading && reviews.length === 0 && (
-              <p className="rev-no-results">No reviews match your filters. Try adjusting your selection.</p>
-            )}
-
-            {page < totalPages && !loading && (
-              <div className="rev-load-more">
-                <button className="rev-load-more-btn" onClick={() => fetchReviews(page + 1)}>
-                  Load More Reviews <ChevronDown size={15} />
-                </button>
-              </div>
-            )}
           </>
         )}
+
+        {/* Public Transparency Statement */}
+        <aside className="rev-transparency-box" aria-label="Review authenticity policy">
+          <Info size={16} className="rev-transparency-icon" />
+          <div className="rev-transparency-copy">
+            <p>
+              Every review reflects an individual customer&apos;s experience. Reviews are moderated for spam, abusive content, and personal information. We do not change customers&apos; original opinions or star ratings. Verified Purchase labels indicate reviews matched to completed orders.
+            </p>
+            <a href="/review-policy" className="rev-policy-link">
+              Read our Review &amp; Authenticity Policy <ArrowUpRight size={13} />
+            </a>
+          </div>
+        </aside>
       </div>
     </section>
   );
 }
-

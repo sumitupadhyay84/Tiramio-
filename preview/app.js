@@ -1,7 +1,7 @@
 const PRODUCTS = {
-  mini: { id: 'mini', name: 'Dear Misu Mini', weight: '100 g', price: 69 },
-  classic: { id: 'classic', name: 'Dear Misu Classic', weight: '200 g', price: 129 },
-  share: { id: 'share', name: 'Dear Misu Share Box', weight: '300 g', price: 189 }
+  mini: { id: 'mini', name: 'Dear Misu Mini', price: 119 },
+  classic: { id: 'classic', name: 'Dear Misu Classic', price: 179 },
+  share: { id: 'share', name: 'Dear Misu Share Box', price: 229 }
 };
 const PHONE = '918433198122';
 const cart = { mini: 0, classic: 0, share: 0 };
@@ -22,7 +22,7 @@ function refreshCart() {
   Object.keys(cart).forEach(id => $(`#qty-${id}`).textContent = cart[id]);
   const lines = Object.entries(cart).filter(([, q]) => q > 0);
   $('#cart-lines').innerHTML = lines.length ? lines.map(([id, qty]) => {
-    const p = PRODUCTS[id]; return `<div class="cart-line"><div><strong>${p.name}</strong><small>${p.weight} · ${money(p.price)} each</small></div><div class="cart-line-actions"><button data-qty="${id}" data-dir="-1" aria-label="Decrease ${p.name}">−</button><b>${qty}</b><button data-qty="${id}" data-dir="1" aria-label="Increase ${p.name}">+</button></div><strong>${money(qty * p.price)}</strong></div>`;
+    const p = PRODUCTS[id]; return `<div class="cart-line"><div><strong>${p.name}</strong><small>${money(p.price)} each</small></div><div class="cart-line-actions"><button data-qty="${id}" data-dir="-1" aria-label="Decrease ${p.name}">−</button><b>${qty}</b><button data-qty="${id}" data-dir="1" aria-label="Increase ${p.name}">+</button></div><strong>${money(qty * p.price)}</strong></div>`;
   }).join('') : '<p class="empty-cart">Your box is waiting for something delicious.</p>';
   $('#checkout-summary-text').textContent = `Your box · ${count} item${count === 1 ? '' : 's'}`;
   $('#checkout-total').textContent = money(total);
@@ -38,7 +38,7 @@ function openCheckout() {
   closeModal('cart-modal'); refreshCart(); openModal('checkout-modal');
 }
 function buildWhatsAppMessage(data) {
-  const items = Object.entries(cart).filter(([, q]) => q > 0).map(([id, qty]) => `• ${PRODUCTS[id].name} (${PRODUCTS[id].weight}) × ${qty} = ${money(PRODUCTS[id].price * qty)}`).join('\n');
+  const items = Object.entries(cart).filter(([, q]) => q > 0).map(([id, qty]) => `• ${PRODUCTS[id].name} × ${qty} = ${money(PRODUCTS[id].price * qty)}`).join('\n');
   return `Hi Dear Misu! I'd like to place an order.\n\n${items}\n\nSubtotal: ${money(subtotal())}\n\nName: ${data.name}\nMobile: ${data.phone}\nFulfilment: ${data.fulfilment}${data.address ? `\nAddress: ${data.address}` : ''}\nPayment preference: ${data.payment}${data.notes ? `\nNotes: ${data.notes}` : ''}\n\nPlease confirm availability and the final total. Thank you!`;
 }
 function makeOrderRef() { return `DEAR-${Math.floor(1000 + Math.random() * 9000)}`; }

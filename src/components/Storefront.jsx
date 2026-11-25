@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { AlertCircle, ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowUpRight, CakeSlice, Check, CheckCircle2, CirclePlay, Coffee, Copy, Heart, Info, Instagram, Leaf, Mail, Menu, MessageCircle, Minus, Package, Phone, Plus, QrCode, ShoppingBag, Sparkles, Truck, X, Youtube } from 'lucide-react';
 import CustomerReviews from './CustomerReviews';
 
 const productVisual = '/images/cocoa-dusted-tiramisu.webp';
@@ -17,9 +17,9 @@ const productImages = {
   share: '/images/dearmisu-share-card.webp'
 };
 const products = [
-  { id: 'mini', name: 'Dear Misu Mini', weight: '100 g', price: 69, referencePrice: 79, saving: 10, description: 'Your personal pause. Just enough to make the day sweeter.', image: productImages.mini, tag: 'PERSONAL TREAT · SAVE ₹10', unitValue: '₹69 / 100 g', valueNote: 'Save ₹10 on your personal box' },
-  { id: 'classic', name: 'Dear Misu Classic', weight: '200 g', price: 129, referencePrice: 140, saving: 11, description: 'The just-right box for your favourite dessert moment.', image: productImages.classic, tag: 'MOST LOVED · SAVE ₹11', unitValue: '₹129 / 200 g', valueNote: 'Save ₹9 compared with two Mini boxes' },
-  { id: 'share', name: 'Dear Misu Share Box', weight: '300 g', price: 189, referencePrice: 210, saving: 21, description: 'More layers, more spoons, more reasons to gather.', image: productImages.share, tag: 'BEST VALUE · SAVE ₹21', unitValue: '₹189 / 300 g', valueNote: 'Save ₹18 compared with three Mini boxes' }
+  { id: 'mini', name: 'Dear Misu Mini', price: 119, referencePrice: 129, saving: 10, description: 'Your personal pause. Just enough to make the day sweeter.', image: productImages.mini, tag: 'PERSONAL TREAT · SAVE ₹10', unitValue: '₹119', valueNote: 'Save ₹10 on your personal box' },
+  { id: 'classic', name: 'Dear Misu Classic', price: 179, referencePrice: 190, saving: 11, description: 'The just-right box for your favourite dessert moment.', image: productImages.classic, tag: 'MOST LOVED · SAVE ₹11', unitValue: '₹179', valueNote: 'Save ₹59 compared with two Mini boxes' },
+  { id: 'share', name: 'Dear Misu Share Box', price: 229, referencePrice: 250, saving: 21, description: 'More layers, more spoons, more reasons to gather.', image: productImages.share, tag: 'BEST VALUE · SAVE ₹21', unitValue: '₹229', valueNote: 'Save ₹128 compared with three Mini boxes' }
 ];
 const api = process.env.NEXT_PUBLIC_API_URL || '';
 const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918433198122';
@@ -176,14 +176,14 @@ export default function Storefront() {
     fetch(`${api}/api/products`).then(response => { if (!response.ok) throw new Error('Catalogue unavailable'); return response.json(); })
       .then(data => {
         if (!active || !Array.isArray(data.products) || !data.products.length) return; setCatalogue(data.products.map(item => ({
-          id: item.id, name: item.name, weight: `${item.weightGrams} g`, price: Number(item.price),
-          referencePrice: item.id === 'mini' ? 79 : item.id === 'classic' ? 140 : 210,
+          id: item.id, name: item.name, price: Number(item.price),
+          referencePrice: item.id === 'mini' ? 129 : item.id === 'classic' ? 190 : 250,
           saving: item.id === 'mini' ? 10 : item.id === 'classic' ? 11 : 21,
           description: item.shortDescription || 'A little dessert moment, made for you.',
           image: productImages[item.id] || productVisual,
-          tag: item.id === 'share' ? 'BEST VALUE · SAVE ₹21' : item.id === 'classic' ? 'MOST LOVED · SAVE ₹11' : 'PERSONAL TREAT · SAVE ₹10',
-          unitValue: `₹${Number(item.price)} / ${item.weightGrams || 100} g`,
-          valueNote: item.id === 'share' ? 'Save ₹18 compared with three Mini boxes' : item.id === 'classic' ? 'Save ₹9 compared with two Mini boxes' : 'Save ₹10 on your personal box'
+          tag: item.badge || (item.id === 'share' ? 'BEST VALUE · SAVE ₹21' : item.id === 'classic' ? 'MOST LOVED · SAVE ₹11' : 'PERSONAL TREAT · SAVE ₹10'),
+          unitValue: money(item.price),
+          valueNote: item.id === 'share' ? 'Save ₹128 compared with three Mini boxes' : item.id === 'classic' ? 'Save ₹59 compared with two Mini boxes' : 'Save ₹10 on your personal box'
         })));
       })
       .catch(() => { /* Keep the bundled menu as a resilient fallback. */ });
@@ -345,16 +345,14 @@ export default function Storefront() {
   }, []);
 
   const getNextOrderRef = async () => {
-    if (api) {
-      try {
-        const response = await fetch(`${api}/api/orders/next-ref`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.orderRef) return data.orderRef;
-        }
-      } catch {
-        // Fallback to client sequence
+    try {
+      const response = await fetch(`${api}/api/orders/next-ref`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.orderRef) return data.orderRef;
       }
+    } catch {
+      // Fallback to client sequence
     }
     try {
       const stored = parseInt(localStorage.getItem('dearmisu_order_seq') || '1000', 10);
@@ -440,17 +438,21 @@ export default function Storefront() {
     };
 
     try {
-      if (api) {
+      try {
         const response = await fetch(`${api}/api/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Could not register order with server.');
+        if (!response.ok && api) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message || 'Could not register order with server.');
+        }
+      } catch (orderErr) {
+        if (api) throw orderErr;
       }
 
-      const lines = chosen.map(item => `• ${item.name} (${item.weight}) × ${qty[item.id]} = ${money(item.price * qty[item.id])}`).join('\n');
+      const lines = chosen.map(item => `• ${item.name} × ${qty[item.id]} = ${money(item.price * qty[item.id])}`).join('\n');
       const text = `Hi Dear Misu! I have completed the UPI payment for my order.\n\n` +
         `✅ *PAYMENT CONFIRMED VIA UPI*\n` +
         `💳 *Payment ID / UTR:* ${cleanPaymentId}\n` +
@@ -479,7 +481,6 @@ export default function Storefront() {
   async function trackOrder(event) {
     event.preventDefault(); setTracking(null); setTrackingError('');
     if (!/^[6-9]\d{9}$/.test(trackingForm.phone)) return setTrackingError('Enter the 10-digit mobile number used for the order.');
-    if (!api) return setTrackingError('Order tracking becomes live after the Express API and PostgreSQL database are connected. For now, message us on WhatsApp with your order reference.');
     try {
       const response = await fetch(`${api}/api/orders/${encodeURIComponent(trackingForm.orderId.trim())}/track?phone=${encodeURIComponent(trackingForm.phone)}`);
       const data = await response.json();
@@ -498,6 +499,7 @@ export default function Storefront() {
       <div className="scroll-progress"><span className="progress-bar" /></div>
       <div className="announcement"><span className="sparkle">✦</span> A little box of happiness, made with care <span className="sparkle">✦</span></div>
       <header ref={headerRef} className="site-header" id="top">
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a className="brand" href="/" onClick={e => navigateToRoute(e, '/')} aria-label="Dear Misu home"><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.webp" alt="" width={48} height={48} /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
         <nav className="desktop-nav">
           <a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a>
@@ -573,14 +575,14 @@ export default function Storefront() {
             <div className="product-grid">{catalogue.map((item, index) => (
               <Reveal key={item.id} delay={index * .1} className={`product-card ${item.id === 'classic' ? 'featured' : ''} ${item.id === 'share' ? 'best-value' : ''}`}>
                 <div className={`product-photo photo-${item.id}`}>
-                  <img className="product-open-gif" src={item.image} alt={`${item.name}, ${item.weight} tiramisu served on a plate`} width={712} height={515} loading="lazy" decoding="async" />
+                  <img className="product-open-gif" src={item.image} alt={`${item.name} tiramisu served on a plate`} width={712} height={515} loading="lazy" decoding="async" />
                   <span className={`photo-tag ${item.saving > 0 ? 'featured-tag' : ''}`}>
                     {item.id === 'mini' ? <Sparkles size={15} fill="currentColor" /> : item.id === 'classic' ? <Heart size={16} fill="currentColor" /> : <Package size={15} />}
                     {item.tag}
                   </span>
                 </div>
                 <div className="product-info">
-                  <div className="product-meta"><span>0{index + 1} / {item.id.toUpperCase()}</span><span>{item.weight}</span></div>
+                  <div className="product-meta"><span>0{index + 1} / {item.id.toUpperCase()}</span></div>
                   <h3>{item.name}</h3>
                   <p>{item.description}</p>
                   <div className="product-buy">
@@ -589,7 +591,6 @@ export default function Storefront() {
                         <strong>{item.unitValue}</strong>
                         {item.saving > 0 && <del>{money(item.referencePrice)}</del>}
                       </div>
-                      <small>Box total {money(item.price)}</small>
                     </div>
                     {(qty[item.id] || 0) > 0 ? (
                       <div className="add-button listing-add quantity-control" role="group" aria-label={`${item.name} quantity`}>
@@ -736,20 +737,36 @@ export default function Storefront() {
         <div className="footer-divider section-wrap" aria-hidden="true"><span>✦</span></div>
         <div className="footer-main section-wrap">
           <div className="footer-brand">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a className="brand brand-footer" href="/" onClick={e => navigateToRoute(e, '/')}><span className="brand-mark brand-image-mark"><img src="/images/dear-misu-badge.webp" alt="" width={48} height={48} /></span><span className="brand-copy"><strong>Dear Misu</strong><small>T I R A M I S U</small></span></a>
             <p>Layers of Love, in Every Bite.</p>
             <div className="footer-socials" aria-label="Social media">
-              <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
+              <a href="https://www.instagram.com/dearmisutiramisu" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={20} /></a>
               <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={20} /></a>
               <a href="https://www.youtube.com/" target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube size={20} /></a>
             </div>
           </div>
           <div className="footer-links">
-            <div><b>EXPLORE</b><a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a><a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a><a href="/reviews" onClick={e => navigateToRoute(e, '/reviews')}>Customer Love</a><a href="/review">Leave a Review</a><a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a><a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a></div>
-            <div><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span></div>
+            <div className="footer-col"><b>EXPLORE</b><a href="/menu" onClick={e => navigateToRoute(e, '/menu')}>Our Menu</a><a href="/story" onClick={e => navigateToRoute(e, '/story')}>Our Story</a><a href="/reviews" onClick={e => navigateToRoute(e, '/reviews')}>Customer Love</a><a href="/review">Leave a Review</a><a href="/track" onClick={e => navigateToRoute(e, '/track')}>Track Order</a><a href="/order-smile" onClick={e => navigateToRoute(e, '/order-smile')}>Order Smile</a></div>
+            <div className="footer-col"><b>GOOD TO KNOW</b><span><Package size={20} />Dessert made with care</span><span><Truck size={20} />Pickup / Delivery Confirmation</span></div>
+            <div className="footer-col footer-support">
+              <b>CUSTOMER CARE</b>
+              <h3 className="footer-care-heading">Need a little help?</h3>
+              <p className="footer-care-desc">Have questions about your order, desserts, delivery, or customer reviews? We&apos;re happy to help.</p>
+              <a
+                className="footer-care-email"
+                href="mailto:dearmisu054@gmail.com?subject=Dear%20Misu%20Customer%20Support"
+                aria-label="Email Dear Misu Customer Support at dearmisu054@gmail.com"
+              >
+                <span className="footer-care-icon" aria-hidden="true"><Mail size={16} strokeWidth={1.9} /></span>
+                <span className="footer-care-email-text">dearmisu054@gmail.com</span>
+              </a>
+            </div>
           </div>
         </div>
-        <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} Dear Misu Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20} /></b></span><a href="/" onClick={e => navigateToRoute(e, '/')}>Back to top <ArrowUpRight size={17} /></a></div>
+        <div className="footer-bottom section-wrap"><span>© {new Date().getFullYear()} Dear Misu Tiramisu. All rights reserved.</span><span>Made with a little extra love <b><Heart size={20} /></b></span>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/" onClick={e => navigateToRoute(e, '/')}>Back to top <ArrowUpRight size={17} /></a></div>
       </footer>
 
       <div className="floating-order"><button className="floating-whatsapp" onClick={() => open('qr')}><QrCode size={13} /> Scan & order</button><button className="floating-cart" onClick={() => open('cart')}>Box <b>{count}</b><strong>{money(total)}</strong></button></div>
@@ -768,7 +785,7 @@ export default function Storefront() {
                   <div className="cart-line" key={item.id}>
                     <div>
                       <strong>{item.name}</strong>
-                      <small>{item.weight} · {money(item.price)} each</small>
+                      <small>{money(item.price)} each</small>
                     </div>
                     <div className="cart-line-actions">
                       <button onClick={() => updateQty(item.id, -1)} aria-label={`Remove one ${item.name}`}><Minus size={11} /></button>

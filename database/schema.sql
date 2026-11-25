@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
-  weight_grams INTEGER NOT NULL CHECK (weight_grams > 0),
+  weight_grams INTEGER,
   price_paise INTEGER NOT NULL CHECK (price_paise >= 0),
   short_description TEXT NOT NULL DEFAULT '',
   badge TEXT NOT NULL DEFAULT '',
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   product_id UUID NOT NULL REFERENCES products(id),
   product_name TEXT NOT NULL,
-  weight_grams INTEGER NOT NULL,
+  weight_grams INTEGER,
   unit_price_paise INTEGER NOT NULL,
   quantity INTEGER NOT NULL CHECK (quantity BETWEEN 1 AND 20),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -89,15 +89,17 @@ CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id);
 
 -- Migration helpers for existing databases
+ALTER TABLE products ALTER COLUMN weight_grams DROP NOT NULL;
+ALTER TABLE order_items ALTER COLUMN weight_grams DROP NOT NULL;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'Pay on pickup / delivery';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS upi_id TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_id TEXT;
 
 INSERT INTO products (slug, name, weight_grams, price_paise, short_description, badge, image_url, sort_order)
 VALUES
-  ('mini', 'Dear Misu Mini', 100, 6900, 'Your personal pause. Just enough to make the day sweeter.', 'PERSONAL TREAT · SAVE ₹10', '/images/dearmisu-mini-card.webp', 1),
-  ('classic', 'Dear Misu Classic', 200, 12900, 'The just-right box for your favourite dessert moment.', 'MOST LOVED · SAVE ₹11', '/images/dearmisu-classic-card.webp', 2),
-  ('share', 'Dear Misu Share Box', 300, 18900, 'More layers, more spoons, more reasons to gather.', 'BEST VALUE · SAVE ₹21', '/images/dearmisu-share-card.webp', 3)
+  ('mini', 'Dear Misu Mini', NULL, 11900, 'Your personal pause. Just enough to make the day sweeter.', 'PERSONAL TREAT · SAVE ₹10', '/images/dearmisu-mini-card.webp', 1),
+  ('classic', 'Dear Misu Classic', NULL, 17900, 'The just-right box for your favourite dessert moment.', 'MOST LOVED · SAVE ₹11', '/images/dearmisu-classic-card.webp', 2),
+  ('share', 'Dear Misu Share Box', NULL, 22900, 'More layers, more spoons, more reasons to gather.', 'BEST VALUE · SAVE ₹21', '/images/dearmisu-share-card.webp', 3)
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   weight_grams = EXCLUDED.weight_grams,
@@ -110,17 +112,25 @@ ON CONFLICT (slug) DO UPDATE SET
 
 
 -- ============================================================
--- Customer Reviews
+-- Customer Reviews & Authenticity System
 -- ============================================================
 DO $$ BEGIN
-  CREATE TYPE review_status AS ENUM ('PENDING','APPROVED','REJECTED');
+  CREATE TYPE review_status AS ENUM ('PENDING','APPROVED','REJECTED','HIDDEN');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TYPE review_status ADD VALUE IF NOT EXISTS 'HIDDEN';
 
 CREATE TABLE IF NOT EXISTS customer_reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id TEXT,
+  product_id TEXT,
+  product_name TEXT NOT NULL,
+  order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+  order_ref TEXT,
+  order_item_id UUID REFERENCES order_items(id) ON DELETE SET NULL,
   customer_name TEXT NOT NULL,
   customer_email TEXT,
-  product_name TEXT NOT NULL,
+  customer_phone VARCHAR(10),
   overall_rating SMALLINT NOT NULL CHECK (overall_rating BETWEEN 1 AND 5),
   taste_rating SMALLINT CHECK (taste_rating BETWEEN 1 AND 5),
   creaminess_rating SMALLINT CHECK (creaminess_rating BETWEEN 1 AND 5),
@@ -138,18 +148,46 @@ CREATE TABLE IF NOT EXISTS customer_reviews (
   recommendation TEXT CHECK (recommendation IN ('Definitely!','Maybe','Not this time')),
   status review_status NOT NULL DEFAULT 'PENDING',
   verified_purchase BOOLEAN NOT NULL DEFAULT FALSE,
+  purchase_verification_status TEXT NOT NULL DEFAULT 'UNVERIFIED' CHECK (purchase_verification_status IN ('VERIFIED_PURCHASE', 'UNVERIFIED')),
+  verification_evidence JSONB,
+  flagged_for_review BOOLEAN NOT NULL DEFAULT FALSE,
+  flag_reason TEXT,
+  moderation_reason TEXT,
+  edit_token_hash TEXT,
   helpful_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  published_at TIMESTAMPTZ,
   moderated_at TIMESTAMPTZ,
   moderated_by TEXT
 );
 
+-- Migration helpers for existing customer_reviews tables
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS customer_id TEXT;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS product_id TEXT;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS order_id UUID REFERENCES orders(id) ON DELETE SET NULL;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS order_ref TEXT;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS order_item_id UUID REFERENCES order_items(id) ON DELETE SET NULL;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(10);
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS purchase_verification_status TEXT NOT NULL DEFAULT 'UNVERIFIED';
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS verification_evidence JSONB;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS flagged_for_review BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS flag_reason TEXT;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS moderation_reason TEXT;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS edit_token_hash TEXT;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS idx_reviews_status ON customer_reviews(status);
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON customer_reviews(product_name);
+CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON customer_reviews(product_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_verification ON customer_reviews(purchase_verification_status);
 CREATE INDEX IF NOT EXISTS idx_reviews_rating ON customer_reviews(overall_rating);
+CREATE INDEX IF NOT EXISTS idx_reviews_customer_id ON customer_reviews(customer_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_order_id ON customer_reviews(order_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_created ON customer_reviews(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reviews_status_created ON customer_reviews(status, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_unique_order_product
+  ON customer_reviews(order_id, product_name) WHERE order_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS review_helpful_votes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -158,3 +196,32 @@ CREATE TABLE IF NOT EXISTS review_helpful_votes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(review_id, voter_ip_hash)
 );
+
+-- Append-only review version history (strict customer opinion integrity)
+CREATE TABLE IF NOT EXISTS review_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  review_id UUID NOT NULL REFERENCES customer_reviews(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  overall_rating SMALLINT NOT NULL,
+  comment TEXT NOT NULL,
+  category_ratings JSONB,
+  recommendation TEXT,
+  edited_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_review_versions_review ON review_versions(review_id, version_number DESC);
+
+-- Append-only administrative & verification audit log (preserved even on deletion)
+CREATE TABLE IF NOT EXISTS review_audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  review_id UUID NOT NULL,
+  actor_type TEXT NOT NULL CHECK (actor_type IN ('admin', 'customer', 'system')),
+  actor_id TEXT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('SUBMITTED', 'APPROVED', 'REJECTED', 'HIDDEN', 'RESTORED', 'DELETED', 'CUSTOMER_EDITED', 'FLAGGED', 'VERIFICATION_CHECKED')),
+  previous_status TEXT,
+  new_status TEXT,
+  reason TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_review_audit_review ON review_audit_logs(review_id, created_at DESC);

@@ -1,12 +1,20 @@
 import crypto from 'node:crypto';
 
-const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || 'admin@fitpulse.com').trim().toLowerCase();
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const ADMIN_SECRET = process.env.ADMIN_STATUS_SECRET || 'SU84upadhyay!@';
+const ENV_USERNAME = (process.env.ADMIN_USERNAME || '').trim().toLowerCase();
+const ENV_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const ENV_SECRET = process.env.ADMIN_STATUS_SECRET || '';
+const DEV_FALLBACK_SECRET = 'dearmisu-dev-admin-secret';
+const ADMIN_SECRET = ENV_SECRET || DEV_FALLBACK_SECRET;
 const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 // In-memory rate limiter for login attempts (15 min window, max 7 failed attempts)
 const loginAttempts = new Map();
+
+export function getClientIp(request) {
+  const forwarded = request.headers.get('x-forwarded-for') || '';
+  const first = forwarded.split(',')[0].trim();
+  return first || request.headers.get('x-real-ip') || 'local';
+}
 
 export function checkLoginRateLimit(ip = 'client') {
   const now = Date.now();
@@ -40,13 +48,16 @@ export function resetLoginAttempts(ip = 'client') {
 export function validateAdminCredentials(username, password) {
   const user = String(username || '').trim().toLowerCase();
   const pass = String(password || '').trim();
+  if (!user || !pass) return false;
 
-  // Allowed usernames: configured ADMIN_USERNAME, 'admin', or 'admin@fitpulse.com'
-  const validUsers = new Set([ADMIN_USERNAME, 'admin', 'admin@fitpulse.com']);
+  const allowedUser = ENV_USERNAME || 'admin';
+  const validUsers = new Set([allowedUser, 'admin'].filter(Boolean));
   if (!validUsers.has(user)) return false;
 
-  // Allowed passwords: configured ADMIN_PASSWORD, ADMIN_SECRET, or fallback values
-  const validPasswords = [ADMIN_PASSWORD, ADMIN_SECRET, 'admin123', 'SU84upadhyay!@'].filter(Boolean);
+  const validPasswords = [ENV_PASSWORD, ENV_SECRET].filter(Boolean);
+  if (validPasswords.length === 0 && process.env.NODE_ENV !== 'production') {
+    validPasswords.push('admin123');
+  }
 
   const passBuf = Buffer.from(pass);
   for (const expected of validPasswords) {
@@ -59,51 +70,61 @@ export function validateAdminCredentials(username, password) {
 }
 
 export function createAdminToken(username = 'admin') {
-  const secret = ADMIN_SECRET;
-  const payload = JSON.stringify({ u: username, ts: Date.now() });
+  const payload = JSON.stringify({ u: username, role: 'administrator', ts: Date.now() });
   const b64Payload = Buffer.from(payload).toString('base64url');
-  const sig = crypto.createHmac('sha256', secret).update(b64Payload).digest('base64url');
+  const sig = crypto.createHmac('sha256', ADMIN_SECRET).update(b64Payload).digest('base64url');
   return `${b64Payload}.${sig}`;
 }
 
-export function verifyAdminToken(token) {
-  if (!token) return false;
+export function parseAdminToken(token) {
+  if (!token) return null;
 
-  // Check if token matches raw secret directly
-  const secret = ADMIN_SECRET;
-  const rawBuf = Buffer.from(token);
-  const secBuf = Buffer.from(secret);
-  if (rawBuf.length === secBuf.length && crypto.timingSafeEqual(rawBuf, secBuf)) {
-    return true;
+  // Accept raw secret for service-to-service admin calls when configured
+  if (ENV_SECRET) {
+    const rawBuf = Buffer.from(token);
+    const secBuf = Buffer.from(ENV_SECRET);
+    if (rawBuf.length === secBuf.length && crypto.timingSafeEqual(rawBuf, secBuf)) {
+      return { authenticated: true, username: ENV_USERNAME || 'admin', role: 'administrator' };
+    }
   }
 
-  // Check JWT-style token: <b64Payload>.<sig>
   const dotIdx = token.lastIndexOf('.');
-  if (dotIdx === -1) return false;
+  if (dotIdx === -1) return null;
 
   const b64Payload = token.slice(0, dotIdx);
   const sig = token.slice(dotIdx + 1);
 
-  const expectedSig = crypto.createHmac('sha256', secret).update(b64Payload).digest('base64url');
+  const expectedSig = crypto.createHmac('sha256', ADMIN_SECRET).update(b64Payload).digest('base64url');
   const a = Buffer.from(sig);
   const b = Buffer.from(expectedSig);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
 
   try {
     const data = JSON.parse(Buffer.from(b64Payload, 'base64url').toString('utf-8'));
-    if (!data.ts || Date.now() - data.ts > SESSION_MAX_AGE_MS) return false;
-    return true;
+    if (!data.ts || Date.now() - data.ts > SESSION_MAX_AGE_MS) return null;
+    if (data.role && data.role !== 'administrator') return null;
+    return {
+      authenticated: true,
+      username: String(data.u || 'admin'),
+      role: data.role || 'administrator'
+    };
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function verifyAdminRequest(request) {
+export function verifyAdminToken(token) {
+  return Boolean(parseAdminToken(token));
+}
+
+export function getAuthenticatedAdmin(request) {
   const authHeader = request.headers.get('authorization') || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
   const secretHeader = request.headers.get('x-admin-status-secret') || '';
   const token = bearerToken || secretHeader;
-
-  return verifyAdminToken(token);
+  return parseAdminToken(token);
 }
 
+export function verifyAdminRequest(request) {
+  return Boolean(getAuthenticatedAdmin(request));
+}

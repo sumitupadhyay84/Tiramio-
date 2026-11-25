@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Key, ShieldCheck, AlertCircle, ArrowRight, ArrowLeft, Eye, EyeOff, Loader } from 'lucide-react';
@@ -212,9 +213,9 @@ export default function AdminLogin() {
         </form>
 
         <div className="admin-auth-footer">
-          <a href="/" className="admin-back-link">
-            <ArrowLeft size={13} /> Return to Public Storefront
-          </a>
+          <Link href="/" className="admin-back-link">
+            <ArrowLeft size={13} /> Return to Dear Misu
+          </Link>
         </div>
       </div>
     </div>

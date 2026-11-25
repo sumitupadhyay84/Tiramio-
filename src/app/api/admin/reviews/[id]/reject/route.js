@@ -1,20 +1,26 @@
 import { NextResponse } from 'next/server';
-import { verifyAdminRequest } from '@/lib/adminAuth';
-import { updateReviewStatus } from '@/lib/reviewsStore';
+import { getAuthenticatedAdmin } from '@/lib/adminAuth';
+import { moderateReview } from '@/lib/reviewsStore';
 
 export async function PATCH(request, { params }) {
-  if (!verifyAdminRequest(request)) {
+  const admin = getAuthenticatedAdmin(request);
+  if (!admin) {
     return NextResponse.json({ message: 'Unauthorized. Admin privileges required.' }, { status: 401 });
   }
 
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
-  const moderatedBy = body.moderatedBy || 'Store Admin';
 
-  const updated = updateReviewStatus(id, 'REJECTED', moderatedBy);
-  if (!updated) {
-    return NextResponse.json({ message: 'Review not found.' }, { status: 404 });
+  const result = moderateReview({
+    id,
+    action: 'REJECT',
+    adminId: admin.username,
+    reason: body.reason || ''
+  });
+
+  if (result.error) {
+    return NextResponse.json({ message: result.error }, { status: result.statusCode || 400 });
   }
 
-  return NextResponse.json({ review: updated });
+  return NextResponse.json({ review: result.review });
 }

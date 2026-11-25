@@ -5,8 +5,7 @@ export async function GET() {
     {
       id: 'mini',
       name: 'Dear Misu Mini',
-      weightGrams: 100,
-      price: 69,
+      price: 119,
       shortDescription: 'Your personal pause. Just enough to make the day sweeter.',
       badge: 'PERSONAL TREAT · SAVE ₹10',
       imageUrl: '/images/dearmisu-mini-card.webp'
@@ -14,8 +13,7 @@ export async function GET() {
     {
       id: 'classic',
       name: 'Dear Misu Classic',
-      weightGrams: 200,
-      price: 129,
+      price: 179,
       shortDescription: 'The just-right box for your favourite dessert moment.',
       badge: 'MOST LOVED · SAVE ₹11',
       imageUrl: '/images/dearmisu-classic-card.webp'
@@ -23,8 +21,7 @@ export async function GET() {
     {
       id: 'share',
       name: 'Dear Misu Share Box',
-      weightGrams: 300,
-      price: 189,
+      price: 229,
       shortDescription: 'More layers, more spoons, more reasons to gather.',
       badge: 'BEST VALUE · SAVE ₹21',
       imageUrl: '/images/dearmisu-share-card.webp'
