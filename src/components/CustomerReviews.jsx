@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Star, ThumbsUp, ChevronDown, ChevronLeft, ChevronRight,
-  ArrowUpRight, Filter, ShieldCheck, Info
+  ArrowUpRight, Filter, ShieldCheck
 } from 'lucide-react';
 
 const api = process.env.NEXT_PUBLIC_API_URL || '';
@@ -430,7 +430,7 @@ export default function CustomerReviews() {
               <div className="rev-slider-top-bar">
                 <div className="rev-queue-status">
                   <span className="rev-public-subnote">
-                    Customer experiences sorted by date · Showing {reviews.length} of {total} published review{total === 1 ? '' : 's'}
+                    Customer experiences
                   </span>
                 </div>
                 <div className="rev-nav-controls">
@@ -502,18 +502,7 @@ export default function CustomerReviews() {
           </>
         )}
 
-        {/* Public Transparency Statement */}
-        <aside className="rev-transparency-box" aria-label="Review authenticity policy">
-          <Info size={16} className="rev-transparency-icon" />
-          <div className="rev-transparency-copy">
-            <p>
-              Every review reflects an individual customer&apos;s experience. Reviews are moderated for spam, abusive content, and personal information. We do not change customers&apos; original opinions or star ratings. Verified Purchase labels indicate reviews matched to completed orders.
-            </p>
-            <a href="/review-policy" className="rev-policy-link">
-              Read our Review &amp; Authenticity Policy <ArrowUpRight size={13} />
-            </a>
-          </div>
-        </aside>
+
       </div>
     </section>
   );
