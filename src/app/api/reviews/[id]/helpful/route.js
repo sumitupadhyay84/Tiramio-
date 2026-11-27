@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { upvoteReviewHelpful } from '@/lib/reviewsStore';
+import { hasDatabase } from '@/lib/pgDb';
+import { upvoteReviewHelpfulPg } from '@/lib/pgStore';
 import { getClientIp } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
@@ -36,19 +38,26 @@ export async function POST(request, { params }) {
   const voterSource = accountOrVoterHint ? `${ip}:${accountOrVoterHint}` : ip;
   const voterHash = crypto.createHash('sha256').update(voterSource).digest('hex');
 
-  const result = upvoteReviewHelpful(id, voterHash);
-  if (result.notFound) {
-    return NextResponse.json({ helpful: false, message: 'Published review not found.' }, { status: 404 });
-  }
-  if (result.duplicate) {
-    return NextResponse.json(
-      { helpful: false, duplicate: true, helpfulCount: result.helpfulCount, message: 'You have already marked this review as helpful.' },
-      { status: 409 }
-    );
-  }
+  try {
+    const result = hasDatabase()
+      ? await upvoteReviewHelpfulPg(id, voterHash)
+      : upvoteReviewHelpful(id, voterHash);
+    if (result.notFound) {
+      return NextResponse.json({ helpful: false, message: 'Published review not found.' }, { status: 404 });
+    }
+    if (result.duplicate) {
+      return NextResponse.json(
+        { helpful: false, duplicate: true, helpfulCount: result.helpfulCount, message: 'You have already marked this review as helpful.' },
+        { status: 409 }
+      );
+    }
 
-  return NextResponse.json({
-    helpful: Boolean(result.voted),
-    helpfulCount: result.helpfulCount
-  });
+    return NextResponse.json({
+      helpful: Boolean(result.voted),
+      helpfulCount: result.helpfulCount
+    });
+  } catch (error) {
+    console.error('POST /api/reviews/[id]/helpful error:', error);
+    return NextResponse.json({ helpful: false, message: 'Failed to record helpful vote.' }, { status: 500 });
+  }
 }
