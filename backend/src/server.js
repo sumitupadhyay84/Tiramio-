@@ -12,10 +12,38 @@ const { pool } = require('./db');
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000').split(',').map(v => v.trim()).filter(Boolean);
+app.set('trust proxy', 1);
+
+const configuredOrigins = new Set(
+  (process.env.CORS_ORIGINS || 'http://localhost:3000')
+    .split(',')
+    .map(v => v.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+);
+for (const envHost of [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]) {
+  if (envHost) {
+    configuredOrigins.add(envHost.startsWith('http') ? envHost.replace(/\/+$/, '') : `https://${envHost}`);
+  }
+}
+
 app.disable('x-powered-by');
 app.use(helmet());
-app.use(cors({ origin(origin, callback) { if (!origin || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origin not allowed by CORS')); } }));
+app.use(cors((req, callback) => {
+  const origin = req.header('Origin');
+  if (!origin) return callback(null, { origin: true });
+  const normalizedOrigin = origin.replace(/\/+$/, '');
+  const reqHost = req.header('Host');
+  let sameHost = false;
+  try {
+    sameHost = Boolean(reqHost && new URL(normalizedOrigin).host === reqHost);
+  } catch {
+    sameHost = false;
+  }
+  if (sameHost || configuredOrigins.has(normalizedOrigin) || configuredOrigins.has('*')) {
+    return callback(null, { origin: true });
+  }
+  return callback(Object.assign(new Error('Origin not allowed by CORS'), { statusCode: 403 }));
+}));
 app.use(express.json({ limit: '100kb' }));
 app.use('/api/', rateLimit({ windowMs: 60_000, limit: 90, standardHeaders: 'draft-7', legacyHeaders: false }));
 
@@ -37,8 +65,14 @@ const asyncRoute = handler => (req, res, next) => Promise.resolve(handler(req, r
 const sanitize = str => String(str || '').replace(/<[^>]*>/g, '').trim();
 
 /* ---------- Multer (review image uploads) ---------- */
-const uploadDir = path.join(process.env.VERCEL ? '/tmp' : __dirname, '..', 'uploads', 'reviews');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = process.env.VERCEL
+  ? path.join('/tmp', 'uploads', 'reviews')
+  : path.join(__dirname, '..', 'uploads', 'reviews');
+try {
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+} catch (err) {
+  console.warn('Upload directory initialization skipped:', err.message);
+}
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => cb(null, `${crypto.randomUUID()}-${Date.now()}${path.extname(file.originalname)}`)
@@ -58,46 +92,61 @@ const upload = multer({
 const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
 const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000; // 12 hours
 
+function getAdminSigningSecret() {
+  return process.env.ADMIN_STATUS_SECRET || process.env.ADMIN_PASSWORD || '';
+}
+
+function timingSafeEqualStr(aStr, bStr) {
+  if (!aStr || !bStr) return false;
+  const a = Buffer.from(aStr);
+  const b = Buffer.from(bStr);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 function createAdminToken(username) {
-  const secret = process.env.ADMIN_STATUS_SECRET || '';
+  const secret = getAdminSigningSecret();
   const ts = Date.now().toString(36);
   const payload = `${ts}.${username}`;
   const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
   return `${payload}.${sig}`;
 }
 
-function verifyAdminToken(token) {
-  const secret = process.env.ADMIN_STATUS_SECRET || '';
-  if (!secret || !token) return false;
+function parseAdminToken(token) {
+  const secret = getAdminSigningSecret();
+  if (!secret || !token) return null;
   const parts = token.split('.');
-  if (parts.length !== 3) return false;
+  if (parts.length !== 3) return null;
   const [ts, username, sig] = parts;
   const payload = `${ts}.${username}`;
   const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
-  // Timing-safe comparison of signatures
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  if (!crypto.timingSafeEqual(a, b)) return false;
-  // Check expiration
+  if (!timingSafeEqualStr(sig, expected)) return null;
   const issuedAt = parseInt(ts, 36);
-  if (Date.now() - issuedAt > ADMIN_SESSION_MAX_AGE_MS) return false;
-  return true;
+  if (!issuedAt || Date.now() - issuedAt > ADMIN_SESSION_MAX_AGE_MS) return null;
+  return { username, role: 'administrator' };
 }
 
 /* ---------- Reusable admin auth ---------- */
-function requireAdmin(req, res) {
+function getAuthenticatedAdmin(req) {
   const authHeader = req.get('authorization') || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
   const supplied = req.get('x-admin-status-secret') || bearerToken || '';
 
-  // Accept either a session token (new) or the raw secret (backward-compat for existing admin APIs)
-  if (supplied && verifyAdminToken(supplied)) return true;
+  const parsed = parseAdminToken(supplied);
+  if (parsed) return parsed;
 
   const expected = process.env.ADMIN_STATUS_SECRET || '';
-  const a = Buffer.from(supplied); const b = Buffer.from(expected);
-  if (expected && a.length === b.length && crypto.timingSafeEqual(a, b)) return true;
+  if (timingSafeEqualStr(supplied, expected)) {
+    return { username: ADMIN_USERNAME || 'admin', role: 'administrator' };
+  }
+  return null;
+}
 
+function requireAdmin(req, res) {
+  const admin = getAuthenticatedAdmin(req);
+  if (admin) {
+    req.adminUser = admin;
+    return true;
+  }
   res.status(401).json({ message: 'Unauthorized. Admin privileges required.' });
   return false;
 }
@@ -117,7 +166,7 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
   const body = req.body || {};
   const secretKey = (body.secretKey || body.password || body.secret || '').trim();
   const username = (body.username || 'admin').trim().toLowerCase();
-  const expected = process.env.ADMIN_STATUS_SECRET || '';
+  const validSecrets = [process.env.ADMIN_STATUS_SECRET, process.env.ADMIN_PASSWORD].filter(Boolean);
 
   // Generic error message – don't reveal which field was wrong
   const denyMsg = 'Invalid administrative credentials. Access denied.';
@@ -126,13 +175,12 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
     return res.status(401).json({ success: false, message: denyMsg });
   }
 
-  if (username !== ADMIN_USERNAME) {
+  const validUsers = new Set([ADMIN_USERNAME, 'admin'].filter(Boolean));
+  if (!validUsers.has(username)) {
     return res.status(401).json({ success: false, message: denyMsg });
   }
 
-  const a = Buffer.from(secretKey);
-  const b = Buffer.from(expected);
-  if (!expected || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+  if (!validSecrets.some(expected => timingSafeEqualStr(secretKey, expected))) {
     return res.status(401).json({ success: false, message: denyMsg });
   }
 
@@ -156,8 +204,8 @@ app.get('/api/admin/verify', (req, res) => {
   if (!requireAdmin(req, res)) return;
   res.json({
     authenticated: true,
-    role: 'administrator',
-    user: 'admin',
+    role: req.adminUser.role,
+    user: req.adminUser.username,
     verifiedAt: new Date().toISOString()
   });
 });
@@ -233,7 +281,7 @@ app.post('/api/orders', asyncRoute(async (req, res) => {
     await client.query('COMMIT');
     res.status(201).json({ orderRef: ref, status: 'placed', total: total / 100, paymentMethod: data.payment, createdAt: inserted.rows[0].created_at });
   } catch (error) {
-    await client.query('ROLLBACK');
+    await safeRollback(client);
     throw error;
   } finally { client.release(); }
 }));
@@ -313,12 +361,35 @@ const PRODUCT_SLUG_MAP = {
   'Dear Misu Share Box': 'share',
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const normalizeProductName = name => String(name || '').replace(/\s*\((100|200|300)g\)$/i, '').trim();
+const safeRollback = async client => { try { await client.query('ROLLBACK'); } catch { /* ignore */ } };
+
+function buildCategoryRatings(source) {
+  return {
+    taste_rating: source.tasteRating || source.taste_rating || null,
+    creaminess_rating: source.creaminessRating || source.creaminess_rating || null,
+    coffee_intensity_rating: source.coffeeIntensityRating || source.coffee_intensity_rating || null,
+    sweetness_rating: source.sweetnessRating || source.sweetness_rating || null,
+    texture_rating: source.textureRating || source.texture_rating || null,
+    chocolate_rating: source.chocolateRating || source.chocolate_rating || null,
+    presentation_rating: source.presentationRating || source.presentation_rating || null,
+  };
+}
+
 const reviewSchema = z.object({
   customerName: z.string().trim().min(2).max(80),
   customerEmail: z.string().email().optional().or(z.literal('')).nullable(),
   customerPhone: z.string().regex(/^[6-9]\d{9}$/).optional().or(z.literal('')).nullable(),
-  orderRef: z.string().regex(/^(DEAR|TIRA)-\d{4,}$/i).optional().or(z.literal('')).nullable(),
-  productName: z.enum(['Dear Misu Mini', 'Dear Misu Classic', 'Dear Misu Share Box']),
+  orderRef: z.string().trim().max(32).optional().or(z.literal('')).nullable(),
+  productName: z.enum([
+    'Dear Misu Mini',
+    'Dear Misu Classic',
+    'Dear Misu Share Box',
+    'Dear Misu Mini (100g)',
+    'Dear Misu Classic (200g)',
+    'Dear Misu Share Box (300g)'
+  ]),
   overallRating: z.coerce.number().int().min(1).max(5),
   tasteRating: z.coerce.number().int().min(1).max(5).optional().nullable(),
   creaminessRating: z.coerce.number().int().min(1).max(5).optional().nullable(),
@@ -327,12 +398,12 @@ const reviewSchema = z.object({
   textureRating: z.coerce.number().int().min(1).max(5).optional().nullable(),
   chocolateRating: z.coerce.number().int().min(1).max(5).optional().nullable(),
   presentationRating: z.coerce.number().int().min(1).max(5).optional().nullable(),
-  sweetnessPreference: z.enum(['Too sweet', 'Just right', 'Less sweet']).optional().nullable(),
-  coffeePreference: z.enum(['Mild', 'Balanced', 'Strong']).optional().nullable(),
-  texturePreference: z.enum(['Extra creamy', 'Soft and fluffy', 'Rich and layered', 'Perfectly balanced']).optional().nullable(),
+  sweetnessPreference: z.enum(['Too sweet', 'Just right', 'Less sweet']).optional().or(z.literal('')).nullable(),
+  coffeePreference: z.enum(['Mild', 'Balanced', 'Strong']).optional().or(z.literal('')).nullable(),
+  texturePreference: z.enum(['Extra creamy', 'Soft and fluffy', 'Rich and layered', 'Perfectly balanced']).optional().or(z.literal('')).nullable(),
   feedbackTags: z.array(z.string().max(50)).max(10).optional().default([]),
   comment: z.string().trim().min(10).max(1000),
-  recommendation: z.enum(['Definitely!', 'Maybe', 'Not this time']).optional().nullable(),
+  recommendation: z.enum(['Definitely!', 'Maybe', 'Not this time']).optional().or(z.literal('')).nullable(),
   honeypot: z.string().max(0).optional()
 });
 
@@ -411,27 +482,29 @@ app.post('/api/reviews', reviewLimiter, upload.single('image'), asyncRoute(async
   if (data.honeypot) return res.status(200).json({ message: 'Thank you for your review!' });
 
   const customerName = sanitize(data.customerName);
+  const productName = normalizeProductName(data.productName);
   const comment = sanitize(data.comment);
   const cleanPhone = data.customerPhone ? String(data.customerPhone).replace(/\D/g, '').slice(-10) : null;
   const cleanEmail = data.customerEmail ? String(data.customerEmail).trim().toLowerCase() : null;
   const cleanOrderRef = data.orderRef ? String(data.orderRef).trim().toUpperCase() : null;
-  const productId = PRODUCT_SLUG_MAP[data.productName] || null;
+  const productId = PRODUCT_SLUG_MAP[productName] || null;
   const customerId = cleanPhone || cleanEmail || null;
   const editToken = crypto.randomBytes(24).toString('hex');
   const suspiciousReason = detectSuspiciousText(comment);
+  const feedbackTags = (data.feedbackTags || []).map(sanitize).filter(Boolean);
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const verification = await verifyPurchasePg(client, { orderRef: cleanOrderRef, customerPhone: cleanPhone, productName: data.productName });
+    const verification = await verifyPurchasePg(client, { orderRef: cleanOrderRef, customerPhone: cleanPhone, productName });
 
     if (verification.verified) {
       const dupCheck = await client.query(
         'SELECT id FROM customer_reviews WHERE order_id = $1 AND product_name = $2 LIMIT 1',
-        [verification.orderId, data.productName]
+        [verification.orderId, productName]
       );
       if (dupCheck.rows.length) {
-        await client.query('ROLLBACK');
+        await safeRollback(client);
         return res.status(409).json({
           message: 'A review has already been submitted for this product on this order.',
           existingReviewId: dupCheck.rows[0].id
@@ -458,11 +531,11 @@ app.post('/api/reviews', reviewLimiter, upload.single('image'), asyncRoute(async
         customerId, productId, verification.verified ? verification.orderId : null,
         verification.verified ? verification.orderRef : cleanOrderRef,
         verification.verified ? verification.orderItemId : null,
-        customerName, cleanEmail, cleanPhone, data.productName, data.overallRating,
+        customerName, cleanEmail, cleanPhone, productName, data.overallRating,
         data.tasteRating || null, data.creaminessRating || null, data.coffeeIntensityRating || null, data.sweetnessRating || null,
         data.textureRating || null, data.chocolateRating || null, data.presentationRating || null,
         data.sweetnessPreference || null, data.coffeePreference || null, data.texturePreference || null,
-        data.feedbackTags, comment, data.recommendation || null,
+        feedbackTags, comment, data.recommendation || null,
         Boolean(verification.verified), verStatus, evidence,
         Boolean(suspiciousReason), suspiciousReason, hashToken(editToken)
       ]
@@ -470,9 +543,9 @@ app.post('/api/reviews', reviewLimiter, upload.single('image'), asyncRoute(async
 
     const reviewId = rows[0].id;
     await client.query(
-      `INSERT INTO review_versions (review_id, version_number, overall_rating, comment, recommendation, edited_by)
-       VALUES ($1, 1, $2, $3, $4, $5)`,
-      [reviewId, data.overallRating, comment, data.recommendation || null, customerName]
+      `INSERT INTO review_versions (review_id, version_number, overall_rating, comment, category_ratings, recommendation, edited_by)
+       VALUES ($1, 1, $2, $3, $4, $5, $6)`,
+      [reviewId, data.overallRating, comment, JSON.stringify(buildCategoryRatings(data)), data.recommendation || null, customerName]
     );
     await client.query(
       `INSERT INTO review_audit_logs (review_id, actor_type, actor_id, action, new_status, metadata)
@@ -485,10 +558,11 @@ app.post('/api/reviews', reviewLimiter, upload.single('image'), asyncRoute(async
       message: 'Thank you for your review! It is now awaiting moderation before publication.',
       reviewId,
       verificationStatus: verStatus,
+      verificationReason: verification.verified ? 'Matched to a completed delivered order.' : verification.reason,
       editToken
     });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await safeRollback(client);
     throw err;
   } finally {
     client.release();
@@ -497,6 +571,7 @@ app.post('/api/reviews', reviewLimiter, upload.single('image'), asyncRoute(async
 
 /* ---------- PATCH /api/reviews/:id – Authenticated Customer Edit ---------- */
 app.patch('/api/reviews/:id', asyncRoute(async (req, res) => {
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ message: 'Review not found.' });
   const token = req.get('x-review-edit-token') || req.body?.editToken || '';
   if (!token) return res.status(401).json({ message: 'Edit token is required.' });
 
@@ -505,48 +580,105 @@ app.patch('/api/reviews/:id', asyncRoute(async (req, res) => {
     await client.query('BEGIN');
     const { rows } = await client.query('SELECT * FROM customer_reviews WHERE id = $1 FOR UPDATE', [req.params.id]);
     if (!rows.length) {
-      await client.query('ROLLBACK');
+      await safeRollback(client);
       return res.status(404).json({ message: 'Review not found.' });
     }
     const existing = rows[0];
-    const suppliedHash = Buffer.from(hashToken(token));
-    const storedHash = Buffer.from(existing.edit_token_hash || '');
-    if (!existing.edit_token_hash || suppliedHash.length !== storedHash.length || !crypto.timingSafeEqual(suppliedHash, storedHash)) {
-      await client.query('ROLLBACK');
+    if (!existing.edit_token_hash || !timingSafeEqualStr(hashToken(token), existing.edit_token_hash)) {
+      await safeRollback(client);
       return res.status(403).json({ message: 'Invalid edit token.' });
     }
 
-    const nextRating = req.body.overallRating ? Number(req.body.overallRating) : existing.overall_rating;
-    const nextComment = req.body.comment ? sanitize(req.body.comment) : existing.comment;
-    if (nextRating < 1 || nextRating > 5 || nextComment.length < 10 || nextComment.length > 1000) {
-      await client.query('ROLLBACK');
+    const nextName = req.body.customerName && sanitize(req.body.customerName).length >= 2
+      ? sanitize(req.body.customerName).slice(0, 80)
+      : existing.customer_name;
+    const nextRating = req.body.overallRating !== undefined ? Number(req.body.overallRating) : existing.overall_rating;
+    const nextComment = req.body.comment !== undefined ? sanitize(req.body.comment) : existing.comment;
+    if (!Number.isInteger(nextRating) || nextRating < 1 || nextRating > 5 || nextComment.length < 10 || nextComment.length > 1000) {
+      await safeRollback(client);
       return res.status(400).json({ message: 'Invalid rating or comment length.' });
     }
 
+    const optRating = (inVal, prevVal) => {
+      if (inVal === undefined) return prevVal;
+      if (!inVal) return null;
+      const n = Number(inVal);
+      return Number.isInteger(n) && n >= 1 && n <= 5 ? n : null;
+    };
+    const nextRecommendation = req.body.recommendation !== undefined
+      ? (['Definitely!', 'Maybe', 'Not this time'].includes(req.body.recommendation) ? req.body.recommendation : null)
+      : existing.recommendation;
+    const nextTags = Array.isArray(req.body.feedbackTags)
+      ? req.body.feedbackTags.map(sanitize).filter(Boolean).slice(0, 10)
+      : existing.feedback_tags;
+    const suspiciousReason = detectSuspiciousText(nextComment);
+
+    const nextCat = {
+      taste_rating: optRating(req.body.tasteRating, existing.taste_rating),
+      creaminess_rating: optRating(req.body.creaminessRating, existing.creaminess_rating),
+      coffee_intensity_rating: optRating(req.body.coffeeIntensityRating, existing.coffee_intensity_rating),
+      sweetness_rating: optRating(req.body.sweetnessRating, existing.sweetness_rating),
+      texture_rating: optRating(req.body.textureRating, existing.texture_rating),
+      chocolate_rating: optRating(req.body.chocolateRating, existing.chocolate_rating),
+      presentation_rating: optRating(req.body.presentationRating, existing.presentation_rating),
+    };
+
     const { rows: updated } = await client.query(
       `UPDATE customer_reviews
-       SET overall_rating = $2, comment = $3, recommendation = COALESCE($4, recommendation),
-           status = 'PENDING', updated_at = now()
-       WHERE id = $1 RETURNING id, customer_name, product_name, overall_rating, comment, status, verified_purchase, purchase_verification_status, created_at, updated_at`,
-      [req.params.id, nextRating, nextComment, req.body.recommendation || null]
+       SET customer_name = $2,
+           overall_rating = $3,
+           comment = $4,
+           recommendation = $5,
+           taste_rating = $6,
+           creaminess_rating = $7,
+           coffee_intensity_rating = $8,
+           sweetness_rating = $9,
+           texture_rating = $10,
+           chocolate_rating = $11,
+           presentation_rating = $12,
+           sweetness_preference = $13,
+           coffee_preference = $14,
+           texture_preference = $15,
+           feedback_tags = $16,
+           flagged_for_review = $17,
+           flag_reason = $18,
+           customer_edited = true,
+           status = 'PENDING',
+           updated_at = now()
+       WHERE id = $1
+       RETURNING id, customer_name, product_name, overall_rating,
+                 taste_rating, creaminess_rating, coffee_intensity_rating, sweetness_rating,
+                 texture_rating, chocolate_rating, presentation_rating,
+                 sweetness_preference, coffee_preference, texture_preference,
+                 feedback_tags, comment, recommendation, status, verified_purchase,
+                 purchase_verification_status, customer_edited, created_at, updated_at`,
+      [
+        req.params.id, nextName, nextRating, nextComment, nextRecommendation,
+        nextCat.taste_rating, nextCat.creaminess_rating, nextCat.coffee_intensity_rating, nextCat.sweetness_rating,
+        nextCat.texture_rating, nextCat.chocolate_rating, nextCat.presentation_rating,
+        req.body.sweetnessPreference !== undefined ? (req.body.sweetnessPreference || null) : existing.sweetness_preference,
+        req.body.coffeePreference !== undefined ? (req.body.coffeePreference || null) : existing.coffee_preference,
+        req.body.texturePreference !== undefined ? (req.body.texturePreference || null) : existing.texture_preference,
+        nextTags, Boolean(suspiciousReason), suspiciousReason
+      ]
     );
 
     const verRes = await client.query('SELECT COALESCE(MAX(version_number), 0)::int AS max_v FROM review_versions WHERE review_id = $1', [req.params.id]);
     await client.query(
-      `INSERT INTO review_versions (review_id, version_number, overall_rating, comment, recommendation, edited_by)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [req.params.id, verRes.rows[0].max_v + 1, nextRating, nextComment, req.body.recommendation || existing.recommendation, existing.customer_name]
+      `INSERT INTO review_versions (review_id, version_number, overall_rating, comment, category_ratings, recommendation, edited_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [req.params.id, verRes.rows[0].max_v + 1, nextRating, nextComment, JSON.stringify(nextCat), nextRecommendation, nextName]
     );
     await client.query(
       `INSERT INTO review_audit_logs (review_id, actor_type, actor_id, action, previous_status, new_status, reason)
        VALUES ($1, 'customer', $2, 'CUSTOMER_EDITED', $3, 'PENDING', 'Customer updated review')`,
-      [req.params.id, existing.customer_id || existing.customer_name, existing.status]
+      [req.params.id, existing.customer_id || nextName, existing.status]
     );
 
     await client.query('COMMIT');
     res.json({ message: 'Review updated and queued for moderation.', review: updated[0] });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await safeRollback(client);
     throw err;
   } finally {
     client.release();
@@ -556,17 +688,19 @@ app.patch('/api/reviews/:id', asyncRoute(async (req, res) => {
 /* ---------- GET /api/reviews – Public approved reviews ---------- */
 app.get('/api/reviews', asyncRoute(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-  const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 10));
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
   const offset = (page - 1) * limit;
 
   const conditions = ["status = 'APPROVED'"];
   const params = [];
   let idx = 1;
 
-  if (req.query.product) { conditions.push(`product_name = $${idx++}`); params.push(req.query.product); }
+  if (req.query.product) { conditions.push(`product_name = $${idx++}`); params.push(normalizeProductName(req.query.product)); }
   if (req.query.rating) { conditions.push(`overall_rating = $${idx++}`); params.push(parseInt(req.query.rating, 10)); }
   if (req.query.verification === 'VERIFIED_PURCHASE' || req.query.verification === 'verified') {
     conditions.push("purchase_verification_status = 'VERIFIED_PURCHASE'");
+  } else if (req.query.verification === 'UNVERIFIED' || req.query.verification === 'unverified') {
+    conditions.push("purchase_verification_status <> 'VERIFIED_PURCHASE'");
   }
 
   const sortParam = req.query.sort || 'chronological';
@@ -590,7 +724,7 @@ app.get('/api/reviews', asyncRoute(async (req, res) => {
             texture_rating, chocolate_rating, presentation_rating,
             sweetness_preference, coffee_preference, texture_preference,
             feedback_tags, comment, recommendation,
-            verified_purchase, purchase_verification_status, helpful_count, created_at, updated_at, published_at
+            verified_purchase, purchase_verification_status, customer_edited, helpful_count, created_at, updated_at, published_at
      FROM customer_reviews WHERE ${where}
      ORDER BY ${orderBy} LIMIT $${idx++} OFFSET $${idx++}`,
     [...params, limit, offset]
@@ -646,15 +780,37 @@ app.get('/api/reviews/stats', asyncRoute(async (req, res) => {
   });
 }));
 
-/* ---------- GET /api/reviews/:id – Single approved review ---------- */
+/* ---------- GET /api/reviews/:id – Single approved review or token-authenticated owner edit lookup ---------- */
 app.get('/api/reviews/:id', asyncRoute(async (req, res) => {
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ message: 'Review not found.' });
+  const token = String(req.query.token || req.get('x-review-edit-token') || '').trim();
+
+  if (token) {
+    const { rows } = await pool.query(
+      `SELECT id, customer_name, product_name, overall_rating,
+              taste_rating, creaminess_rating, coffee_intensity_rating, sweetness_rating,
+              texture_rating, chocolate_rating, presentation_rating,
+              sweetness_preference, coffee_preference, texture_preference,
+              feedback_tags, comment, recommendation, status,
+              verified_purchase, purchase_verification_status, customer_edited,
+              helpful_count, created_at, updated_at, edit_token_hash
+       FROM customer_reviews WHERE id = $1`,
+      [req.params.id]
+    );
+    if (!rows.length || !rows[0].edit_token_hash || !timingSafeEqualStr(hashToken(token), rows[0].edit_token_hash)) {
+      return res.status(404).json({ message: 'Review not found or your edit link token is invalid.' });
+    }
+    const { edit_token_hash, ...safeReview } = rows[0];
+    return res.json({ review: safeReview });
+  }
+
   const { rows } = await pool.query(
     `SELECT id, customer_name, product_name, overall_rating,
             taste_rating, creaminess_rating, coffee_intensity_rating, sweetness_rating,
             texture_rating, chocolate_rating, presentation_rating,
             sweetness_preference, coffee_preference, texture_preference,
             feedback_tags, comment, recommendation,
-            verified_purchase, purchase_verification_status, helpful_count, created_at
+            verified_purchase, purchase_verification_status, customer_edited, helpful_count, created_at
      FROM customer_reviews WHERE id = $1 AND status = 'APPROVED'`,
     [req.params.id]
   );
@@ -664,8 +820,11 @@ app.get('/api/reviews/:id', asyncRoute(async (req, res) => {
 
 /* ---------- POST /api/reviews/:id/helpful – Vote helpful ---------- */
 app.post('/api/reviews/:id/helpful', asyncRoute(async (req, res) => {
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
-  const voterIpHash = crypto.createHash('sha256').update(ip).digest('hex');
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ helpful: false, message: 'Published review not found.' });
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  const voterHint = String(req.get('x-voter-id') || req.body?.voterId || '').trim().slice(0, 64);
+  const voterSource = voterHint ? `${ip}:${voterHint}` : ip;
+  const voterIpHash = crypto.createHash('sha256').update(voterSource).digest('hex');
 
   const pubCheck = await pool.query("SELECT id, helpful_count FROM customer_reviews WHERE id = $1 AND status = 'APPROVED'", [req.params.id]);
   if (!pubCheck.rows.length) return res.status(404).json({ helpful: false, message: 'Published review not found.' });
@@ -704,7 +863,7 @@ app.get('/api/admin/reviews', asyncRoute(async (req, res) => {
       params.push(req.query.status);
     }
   }
-  if (req.query.product) { conditions.push(`product_name = $${idx++}`); params.push(req.query.product); }
+  if (req.query.product) { conditions.push(`product_name = $${idx++}`); params.push(normalizeProductName(req.query.product)); }
   if (req.query.rating) { conditions.push(`overall_rating = $${idx++}`); params.push(parseInt(req.query.rating, 10)); }
   if (req.query.verification === 'VERIFIED_PURCHASE' || req.query.verification === 'UNVERIFIED') {
     conditions.push(`purchase_verification_status = $${idx++}`);
@@ -714,7 +873,7 @@ app.get('/api/admin/reviews', asyncRoute(async (req, res) => {
     conditions.push('flagged_for_review = true');
   }
   if (req.query.search) {
-    conditions.push(`(customer_name ILIKE $${idx} OR customer_email ILIKE $${idx} OR comment ILIKE $${idx} OR product_name ILIKE $${idx})`);
+    conditions.push(`(customer_name ILIKE $${idx} OR customer_email ILIKE $${idx} OR comment ILIKE $${idx} OR product_name ILIKE $${idx} OR order_ref ILIKE $${idx})`);
     params.push(`%${req.query.search}%`);
     idx++;
   }
@@ -738,7 +897,8 @@ app.get('/api/admin/reviews', asyncRoute(async (req, res) => {
     [...params, limit, offset]
   );
 
-  res.json({ reviews: rows, total, page, totalPages: Math.ceil(total / limit) || 1 });
+  const safeRows = rows.map(({ edit_token_hash, ...safe }) => safe);
+  res.json({ reviews: safeRows, total, page, totalPages: Math.ceil(total / limit) || 1 });
 }));
 
 /* ---------- ADMIN: GET /api/admin/reviews/stats ---------- */
@@ -779,14 +939,24 @@ app.get('/api/admin/reviews/stats', asyncRoute(async (req, res) => {
   });
 }));
 
+/* ---------- ADMIN: GET /api/admin/reviews/audit – Append-only audit log ---------- */
+app.get('/api/admin/reviews/audit', asyncRoute(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 100));
+  const { rows } = await pool.query('SELECT * FROM review_audit_logs ORDER BY created_at DESC LIMIT $1', [limit]);
+  res.json({ auditLogs: rows });
+}));
+
 /* ---------- ADMIN: GET /api/admin/reviews/:id – Full detail + audit + versions ---------- */
 app.get('/api/admin/reviews/:id', asyncRoute(async (req, res) => {
   if (!requireAdmin(req, res)) return;
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ message: 'Review not found.' });
   const rev = await pool.query('SELECT * FROM customer_reviews WHERE id = $1', [req.params.id]);
   if (!rev.rows.length) return res.status(404).json({ message: 'Review not found.' });
   const logs = await pool.query('SELECT * FROM review_audit_logs WHERE review_id = $1 ORDER BY created_at DESC', [req.params.id]);
   const versions = await pool.query('SELECT * FROM review_versions WHERE review_id = $1 ORDER BY version_number DESC', [req.params.id]);
-  res.json({ review: rev.rows[0], auditLogs: logs.rows, versions: versions.rows });
+  const { edit_token_hash, ...safeReview } = rev.rows[0];
+  res.json({ review: safeReview, auditLogs: logs.rows, versions: versions.rows });
 }));
 
 /* ---------- ADMIN: PATCH /api/admin/reviews/:id – Block rewriting customer opinions ---------- */
@@ -797,7 +967,8 @@ app.patch('/api/admin/reviews/:id', (req, res) => {
 
 async function runPgModeration(req, res, { action, targetStatus, requireReason, allowedPrev }) {
   if (!requireAdmin(req, res)) return;
-  const moderatedBy = (req.body && req.body.moderatedBy) || 'admin';
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ message: 'Review not found.' });
+  const moderatedBy = (req.body && req.body.moderatedBy) || req.adminUser?.username || 'admin';
   const reason = String((req.body && req.body.reason) || '').trim();
   if (requireReason && reason.length < 3) {
     return res.status(400).json({ message: `An internal moderation reason is required to ${action.toLowerCase()} a review.` });
@@ -808,12 +979,12 @@ async function runPgModeration(req, res, { action, targetStatus, requireReason, 
     await client.query('BEGIN');
     const cur = await client.query('SELECT * FROM customer_reviews WHERE id = $1 FOR UPDATE', [req.params.id]);
     if (!cur.rows.length) {
-      await client.query('ROLLBACK');
+      await safeRollback(client);
       return res.status(404).json({ message: 'Review not found.' });
     }
     const prevStatus = cur.rows[0].status;
     if (allowedPrev && !allowedPrev.includes(prevStatus)) {
-      await client.query('ROLLBACK');
+      await safeRollback(client);
       return res.status(400).json({ message: `Cannot ${action.toLowerCase()} a review in ${prevStatus} state.` });
     }
 
@@ -836,9 +1007,10 @@ async function runPgModeration(req, res, { action, targetStatus, requireReason, 
     );
 
     await client.query('COMMIT');
-    res.json({ review: rows[0] });
+    const { edit_token_hash, ...safeReview } = rows[0];
+    res.json({ review: safeReview });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await safeRollback(client);
     throw err;
   } finally {
     client.release();
@@ -864,6 +1036,7 @@ app.patch('/api/admin/reviews/:id/restore', asyncRoute((req, res) =>
 /* ---------- ADMIN: DELETE /api/admin/reviews/:id ---------- */
 app.delete('/api/admin/reviews/:id', asyncRoute(async (req, res) => {
   if (!requireAdmin(req, res)) return;
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ message: 'Review not found.' });
   const reasonCategory = String(req.body?.reasonCategory || req.query.reasonCategory || '').trim();
   const reason = String(req.body?.reason || req.query.reason || '').trim();
   const validCategories = new Set(['duplicate', 'privacy_erasure', 'legal_compliance', 'spam_fraud']);
@@ -876,25 +1049,25 @@ app.delete('/api/admin/reviews/:id', asyncRoute(async (req, res) => {
     await client.query('BEGIN');
     const cur = await client.query('SELECT * FROM customer_reviews WHERE id = $1 FOR UPDATE', [req.params.id]);
     if (!cur.rows.length) {
-      await client.query('ROLLBACK');
+      await safeRollback(client);
       return res.status(404).json({ message: 'Review not found.' });
     }
     const target = cur.rows[0];
     if (target.overall_rating <= 2 && target.purchase_verification_status === 'VERIFIED_PURCHASE' && reasonCategory === 'spam_fraud') {
-      await client.query('ROLLBACK');
+      await safeRollback(client);
       return res.status(403).json({ message: 'Verified-purchase negative feedback cannot be deleted as spam.' });
     }
 
     await client.query(
       `INSERT INTO review_audit_logs (review_id, actor_type, actor_id, action, previous_status, new_status, reason)
-       VALUES ($1, 'admin', 'admin', 'DELETED', $2, 'DELETED', $3)`,
-      [req.params.id, target.status, `[${reasonCategory}] ${reason}`]
+       VALUES ($1, 'admin', $2, 'DELETED', $3, 'DELETED', $4)`,
+      [req.params.id, req.adminUser?.username || 'admin', target.status, `[${reasonCategory}] ${reason}`]
     );
     await client.query('DELETE FROM customer_reviews WHERE id = $1', [req.params.id]);
     await client.query('COMMIT');
     res.json({ deleted: true });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await safeRollback(client);
     throw err;
   } finally {
     client.release();
@@ -907,7 +1080,7 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message: status === 500 ? 'Something went wrong. Please try again.' : err.message });
 });
 
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+if (!process.env.VERCEL) {
   app.listen(port, () => console.log(`DearMisu API listening on port ${port}`));
 }
 
