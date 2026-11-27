@@ -4,6 +4,7 @@ const nextConfig = {
   images: { formats: ['image/avif', 'image/webp'] },
   async rewrites() {
     const rewrites = [
+      { source: '/health', destination: '/api/health' },
       { source: '/menu', destination: '/' },
       { source: '/story', destination: '/' },
       { source: '/reviews', destination: '/' },

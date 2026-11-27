@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createOrder } from '@/lib/ordersStore';
+import { hasDatabase } from '@/lib/pgDb';
+import { createOrderPg } from '@/lib/pgStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +19,7 @@ export async function POST(request) {
       return NextResponse.json({ message: 'Delivery address is required for delivery orders.' }, { status: 400 });
     }
 
-    const order = createOrder(body);
+    const order = hasDatabase() ? await createOrderPg(body) : createOrder(body);
     return NextResponse.json({
       orderRef: order.order_ref,
       status: order.status,
@@ -27,6 +29,7 @@ export async function POST(request) {
     }, { status: 201 });
   } catch (error) {
     console.error('POST /api/orders error:', error);
-    return NextResponse.json({ message: 'Unable to create order.' }, { status: 500 });
+    const status = error.statusCode || 500;
+    return NextResponse.json({ message: status === 500 ? 'Unable to create order.' : error.message }, { status });
   }
 }

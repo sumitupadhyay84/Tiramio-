@@ -4,7 +4,7 @@ const ENV_USERNAME = (process.env.ADMIN_USERNAME || '').trim().toLowerCase();
 const ENV_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const ENV_SECRET = process.env.ADMIN_STATUS_SECRET || '';
 const DEV_FALLBACK_SECRET = 'dearmisu-dev-admin-secret';
-const ADMIN_SECRET = ENV_SECRET || DEV_FALLBACK_SECRET;
+const ADMIN_SECRET = ENV_SECRET || ENV_PASSWORD || DEV_FALLBACK_SECRET;
 const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 // In-memory rate limiter for login attempts (15 min window, max 7 failed attempts)

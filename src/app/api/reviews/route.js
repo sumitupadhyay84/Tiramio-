@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPublicReviews, createReview } from '@/lib/reviewsStore';
+import { hasDatabase } from '@/lib/pgDb';
+import { getPublicReviewsPg, createReviewPg } from '@/lib/pgStore';
 import { getClientIp } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +39,10 @@ export async function GET(request) {
     const verification = searchParams.get('verification') || '';
     const sort = searchParams.get('sort') || 'chronological';
 
-    const data = getPublicReviews({ page, limit, product, rating, verification, sort });
+    const query = { page, limit, product, rating, verification, sort };
+    const data = hasDatabase()
+      ? await getPublicReviewsPg(query)
+      : getPublicReviews(query);
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching public reviews:', error);
@@ -131,7 +136,9 @@ export async function POST(request) {
       recommendation: payload.recommendation || null
     };
 
-    const result = createReview(sanitizedInput);
+    const result = hasDatabase()
+      ? await createReviewPg(sanitizedInput)
+      : createReview(sanitizedInput);
     if (result.error) {
       return NextResponse.json(
         { message: result.error, code: result.code, existingReviewId: result.existingReviewId },
