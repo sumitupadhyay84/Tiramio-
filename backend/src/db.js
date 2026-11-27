@@ -8,12 +8,12 @@ if (!databaseUrl) {
 
 const pool = new Pool({
   connectionString: databaseUrl || 'postgresql://localhost:5432/Dearmisu',
-  ssl: process.env.NODE_ENV === 'production' || (databaseUrl && !databaseUrl.includes('localhost'))
+  ssl: process.env.NODE_ENV === 'production' || process.env.VERCEL || (databaseUrl && !databaseUrl.includes('localhost'))
     ? { rejectUnauthorized: false }
     : false,
-  max: 10,
+  max: process.env.VERCEL ? 5 : 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000
+  connectionTimeoutMillis: 15000
 });
 
 pool.on('error', error => console.error('Unexpected PostgreSQL pool error:', error));

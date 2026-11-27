@@ -118,7 +118,8 @@ DO $$ BEGIN
   CREATE TYPE review_status AS ENUM ('PENDING','APPROVED','REJECTED','HIDDEN');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-ALTER TYPE review_status ADD VALUE IF NOT EXISTS 'HIDDEN';
+-- For pre-existing databases whose review_status enum predates 'HIDDEN', run standalone outside a transaction:
+-- ALTER TYPE review_status ADD VALUE IF NOT EXISTS 'HIDDEN';
 
 CREATE TABLE IF NOT EXISTS customer_reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -154,6 +155,7 @@ CREATE TABLE IF NOT EXISTS customer_reviews (
   flag_reason TEXT,
   moderation_reason TEXT,
   edit_token_hash TEXT,
+  customer_edited BOOLEAN NOT NULL DEFAULT FALSE,
   helpful_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -175,6 +177,7 @@ ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS flagged_for_review BOOLEAN
 ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS flag_reason TEXT;
 ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS moderation_reason TEXT;
 ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS edit_token_hash TEXT;
+ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS customer_edited BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE customer_reviews ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS idx_reviews_status ON customer_reviews(status);
